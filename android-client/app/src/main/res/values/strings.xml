@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Stock Evaluator</string>
+    <string name="ping_backend">Ping Backend</string>
+    <string name="pinging">Pinging…</string>
+    <string name="last_response">Last response:</string>
+</resources>

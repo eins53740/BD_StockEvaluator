@@ -1,0 +1,10 @@
+# Project Structure
+```
+stock-evaluator/
+├── app.py
+├── requirements.txt
+├── templates/
+│   └── index.html
+└── static/
+    └── flowchart.js
+```

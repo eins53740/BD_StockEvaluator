@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mermaid {
+            text-align: center;
+            margin: 2em 0;
+            background: white;
+            padding: 1em;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Evaluator Flowchart Test</h1>
+        <p>This page tests the improved Mermaid flowchart rendering with better formatting and layout.</p>
+        
+        <h2>Test Flowchart</h2>
+        <div class="mermaid">
+graph TD
+    A[Start] --> B{"Revenue Growth > 10%?<br/>Actual: 15.0%"};
+    B -->|Yes| C{"P/E < 25?<br/>Actual: 22.50"};
+    B -->|No| D[Do Not Buy];
+    C -->|Yes| E{"ROE > 15%?<br/>Actual: 18.0%"};
+    C -->|No| F{"PEG < 2?<br/>Actual: 1.85"};
+    F -->|Yes| E;
+    F -->|No| D;
+    E -->|Yes| G{"Net Profit Margin > 10%?<br/>Actual: 12.0%"};
+    E -->|No| D;
+    G -->|Yes| H{"Debt/Equity < 1.0?<br/>Actual: 0.45"};
+    G -->|No| D;
+    H -->|Yes| I{"Quick Ratio > 1.5?<br/>Actual: 1.8"};
+    H -->|No| D;
+    I -->|Yes| J[BUY];
+    I -->|No| K[BUY with Caution];
+
+classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#333;
+classDef pass fill:#d1e7dd,stroke:#198754,stroke-width:3px,color:#000;
+classDef fail fill:#f8d7da,stroke:#dc3545,stroke-width:3px,color:#000;
+classDef close_fail fill:#fff3cd,stroke:#ffc107,stroke-width:3px,color:#000;
+classDef start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000;
+classDef decision fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000;
+
+class A start;
+class B pass;
+class C pass;
+class E pass;
+class G pass;
+class H pass;
+class I pass;
+class J pass;
+class F decision;
+        </div>
+        
+        <h2>Expected Improvements</h2>
+        <ul>
+            <li>✅ Clean node layout with proper spacing</li>
+            <li>✅ Multi-line text with line breaks</li>
+            <li>✅ Color-coded nodes based on status</li>
+            <li>✅ Proper arrow labels and connections</li>
+            <li>✅ Responsive design that works on mobile</li>
+        </ul>
+        
+        <p><strong>Instructions:</strong> Open this file in a web browser to test the flowchart rendering. 
+        The flowchart should display clearly with proper formatting, colors, and readable text.</p>
+    </div>
+
+    <script>
+        // Configure Mermaid with the same settings as the main app
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'linear',
+                padding: 20,
+                nodeSpacing: 60,
+                rankSpacing: 60,
+                diagramPadding: 8
+            },
+            securityLevel: 'loose',
+            logLevel: 'error',
+            maxTextSize: 90000,
+            maxEdges: 100,
+            wrap: true,
+            fontSize: 16
+        });
+    </script>
+</body>
+</html>
