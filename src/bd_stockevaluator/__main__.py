@@ -5,6 +5,7 @@ Enables running the Flask application as a module.
 """
 from .app import app
 
+
 def main():
     """
     Main entry point to run the Flask web application.
@@ -15,6 +16,7 @@ def main():
     # For a production deployment, a proper WSGI server like gunicorn or uvicorn
     # should be used instead of app.run().
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 if __name__ == "__main__":
     main()

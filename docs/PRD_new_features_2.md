@@ -55,24 +55,24 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 
 ### Epic 5 - Qualitative & Moat Evaluation
 **Goal:** Layer qualitative moat scoring into reports.
-- F5.1 Moat Framework - Score switching costs, network effects, intangible assets, cost advantage, efficient scale (manual inputs plus AI summaries).
-- F5.2 Ownership Trends - Display institutional and insider ownership charts (Alpha Vantage/FMP).
-- F5.3 Management Quality - Extract KPIs from 10-Ks/annual letters via text mining.
+- [x] F5.1 Moat Framework - Score switching costs, network effects, intangible assets, cost advantage, efficient scale (manual inputs plus AI summaries).
+- [x] F5.2 Ownership Trends - Display institutional and insider ownership charts (Alpha Vantage/FMP).
+- [x] F5.3 Management Quality - Extract KPIs from 10-Ks/annual letters via text mining.
 
 ### Epic 6 - Portfolio & Reporting Automation
 **Goal:** Move beyond single-ticker analysis.
-- F6.1 Holdings Import - Accept CSV/Excel holdings, calculate sector exposure and position weights.
-- F6.2 Performance Analytics - Compute CAGR, alpha vs S&P500, beta-adjusted returns.
-- F6.3 Automated Reports - Generate daily PDFs/emails summarising portfolio changes, valuation alerts, macro context.
-- F6.4 Watchlist Alerts - Notify when fundamentals or technicals hit custom thresholds.
+- [x] F6.1 Holdings Import - Accept CSV/Excel holdings, calculate sector exposure and position weights.
+- [x] F6.2 Performance Analytics - Compute CAGR, alpha vs S&P500, beta-adjusted returns.
+- [x] F6.3 Automated Reports - Generate daily PDFs/emails summarising portfolio changes, valuation alerts, macro context.
+- [x] F6.4 Watchlist Alerts - Notify when fundamentals or technicals hit custom thresholds.
 
 ### Epic 7 - UX & Platform Integration
 **Goal:** Deliver a cohesive cross-platform experience.
-- F7.1 Desktop Overview - Streamlit dashboard combining fundamentals, technicals, macro (first iteration). Flask single-ticker route remains.
-- F7.2 Per-Ticker Report - Printable one-page analysis integrating new metrics and the existing Mermaid flow.
-- F7.3 Chart Explorer - Interactive ratio history and TA charts.
-- F7.4 Sync Layer - Share SQLite/REST payloads so desktop and Android remain aligned.
-  - Printable reports: HTML→PDF via WeasyPrint (fallback `pdfkit`), embedding Plotly static charts and intrinsic value summary.
+- [x] F7.1 Desktop Overview - Streamlit dashboard combining fundamentals, technicals, macro (first iteration). Flask single-ticker route remains.
+- [x] F7.2 Per-Ticker Report - Printable one-page analysis integrating new metrics and the existing Mermaid flow.
+- [x] F7.3 Chart Explorer - Interactive ratio history and TA charts.
+- [x] F7.4 Sync Layer - Share SQLite/REST payloads so desktop and Android remain aligned.
+  - [x] Printable reports: HTML→PDF via WeasyPrint (fallback `pdfkit`), embedding Plotly static charts and intrinsic value summary.
 
 ### Epic 8 - AI & Automation Layer (v2 Enhancements)
 **Goal:** Upgrade AI capabilities beyond the current second opinion.
@@ -88,8 +88,17 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 - F9.3 API Gateway - Unified access to external providers with rate-limit handling.
 - F9.4 Deployment Tooling - PyInstaller/CI scripts for packaging dashboards and services.
 
-### Epic 10 - Foreigner stocks
-- F10.1 Be able to evaluate stocks outside the usa? Support yfinance ticker suffixes (e.g., `TSCO.L`, `B3SA3.SA`, `DAI.DE`); persist `exchange`, `country`, and `currency`; normalise to EUR and USD; FMP as fallback provider where available.
+### Epic 10 - Foreigner stocks and UI - UX improvement
+**Goal:** Extend ticker range tfrom usa to world. Improve UX.
+ - F10.1 Multi-exchange equity support: Implement full international ticker handling using yfinance suffixes (e.g., TSCO.L, B3SA3.SA, DAI.DE, 7203.T) mapped to canonical exchange, country, and currency, storing these fields in persistence and exposing them via API. Fetch quotes and historical OHLC in native currency, then normalise to EUR and USD using a single timestamped FX snapshot per response for consistency (apply conversions before computing returns to keep % moves identical across currencies). Use a provider chain where Yahoo Finance is primary and FMP is an automatic fallback; surface data_provider and provider_fallback=true when triggered, with structured logging for fallbacks and FX snapshot IDs. Ensure exchange-timezone correctness for market open/close and include both asof_utc and asof_exchange_tz. Deliver a suffix→metadata registry, backfill missing metadata on first read of stored tickers, and add tests for ticker parsing, FX maths, provider failover, and snapshot equivalence of returns; update docs (supported suffixes, fields, flags) and dashboards for error/fallback rates.
+ - F10.2 Flowchart text visibility (2-line labels & legibility): Add an automatic label-wrapping routine that measures text and splits at word boundaries into at most two lines, applying an ellipsis on the second line when overflow occurs. Vertically centre text within the shape, increase node height responsively to avoid clipping, and enforce minimum dimensions and padding so two lines remain readable at 75–150% zoom. Use theme-aware colours with a WCAG contrast ratio ≥ 4.5:1, consistent font size/line-height, and render via SVG <tspan> offsets or canvas equivalents. Provide a hover tooltip (and aria-label/title) that reveals the full, untruncated label for accessibility; include keyboard focus styles. Add visual regression tests for short/long labels, light/dark themes, and zoom scales, plus snapshot tests for the wrapping algorithm’s boundary cases.
+ 
+ - F10.3 Evaluate and optimize the decision flow thresholds.
+
+
+### Epic 11 - Contaierisation
+**Goal:** Use the package in a containerised environment.
+ - F11.1 Containerise Python package & local test (real/mocked Docker): Produce a production-ready multi-stage Dockerfile (Python 3.12-slim, pinned dependencies, non-root user, healthcheck) and optional docker-compose.yml for one-command local bring-up. The container must start via python -m app, expose and probe a /health endpoint, and build cleanly with docker build -t app:local .. Introduce DOCKER_RUNTIME=real|mock to switch between the Docker SDK and a lightweight fake client, allowing CI to run fast without host Docker while retaining an opt-in job that exercises a real engine (e.g., nightly). Provide pytest examples that parametrise both modes, guard real-Docker tests behind DOCKER_AVAILABLE=1, and document local commands for build/run. Ensure CI uses mock by default, publishes an image on main, and includes README updates on build, run, environment variables, and test strategy.
 
 ---
 
@@ -113,14 +122,13 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 
 ---
 
-## Resumo (TL;DR em portugues)
-
 ## Decisions Finalised (v2)
 - Normalised schema and provider precedence (Epic 1) locked as above.
 - Intrinsic models defaults (Epic 2): DCF 5Y, 2% terminal, 10% discount ±2 pp by risk, 25% safety margin; Graham capped; DDM gated by payout and conservative caps.
 - Technical aggregation (Epic 3): 0–10 trend+momentum; Plotly charts rendered to PNG in Flask.
 - Macro (Epic 4): FRED provider, series list and cadence defined; `macro_series` and `macro_snapshot` tables.
 - UX/Reports (Epic 7): Streamlit chosen; HTML→PDF one-pagers with embedded charts.
+
 A versao 2 da BD_Finance evolui a aplicacao com conectores multi-fontes, analises fundamentais, tecnicas e macroeconomicas mais profundas, avaliacao qualitativa de vantagens competitivas, relatorios automatizados e integracao de IA mais robusta. Mantemos a filosofia de "qualidade a bom preco", garantindo transparencia e automacao, enquanto sincronizamos dashboards desktop e app Android.
 
 

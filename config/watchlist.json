@@ -1,0 +1,56 @@
+[
+  {
+    "ticker": "AMD",
+    "channels": ["email"],
+    "rules": [
+      {
+        "path": "valuation_scorecard.overall_score",
+        "operator": ">=",
+        "value": 80,
+        "message": "Valuation score cleared portfolio hurdle (>= 80)."
+      },
+      {
+        "path": "technical_analysis.signal.score",
+        "operator": ">=",
+        "value": 7,
+        "message": "Technical signal in buy territory."
+      }
+    ]
+  },
+  {
+    "ticker": "PYPL",
+    "channels": ["email", "push"],
+    "rules": [
+      {
+        "path": "dividend_analysis.current_yield",
+        "operator": ">=",
+        "value": 0.02,
+        "message": "Dividend yield above 2%."
+      },
+      {
+        "path": "risk_assessment.overall_risk_score",
+        "operator": "<=",
+        "value": 30,
+        "message": "Risk score remains in the comfortable zone."
+      }
+    ]
+  },
+  {
+    "ticker": "NVDA",
+    "channels": ["email"],
+    "rules": [
+      {
+        "path": "growth_trends.metrics.revenue.cagr_5",
+        "operator": ">=",
+        "value": 0.25,
+        "message": "Five-year revenue CAGR above 25%."
+      },
+      {
+        "path": "technical_analysis.signal.score",
+        "operator": "<=",
+        "value": 3,
+        "message": "Technical signal rolled over; review exposure."
+      }
+    ]
+  }
+]

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from bd_stockevaluator.core.service import STATIC_DIR, StockAnalysisService
 
 
+@patch("bd_stockevaluator.core.service._build_qualitative_components")
 @patch("bd_stockevaluator.core.service.MACRO_SERVICE")
 @patch("bd_stockevaluator.core.service.generate_stock_opinion")
 @patch("bd_stockevaluator.core.service.StockAnalysisFeatures")
@@ -19,6 +20,7 @@ def test_analyze_full_flow(
     features_cls_mock,
     opinion_mock,
     macro_service_mock,
+    qualitative_mock,
 ):
     get_stock_data_mock.return_value = {
         "longName": "Acme Corp",
@@ -114,6 +116,40 @@ def test_analyze_full_flow(
         "sentiment": {"regime": "neutral"},
         "alignment": {"insights": ["Balanced"], "risk_bias": "balanced"},
     }
+    qualitative_mock.return_value = {
+        "moat": {
+            "overall_score": 81.2,
+            "moat_rating": "Wide Moat",
+            "dimensions": {
+                "switching_costs": {
+                    "manual_score": 90.0,
+                    "ai_score": 88.0,
+                    "combined_score": 89.0,
+                    "summary": "High retention across enterprise clients.",
+                    "notes": [],
+                }
+            },
+        },
+        "ownership": {
+            "institutional": {
+                "trend": "increasing",
+                "change_percentage": 6.4,
+                "latest": 68.1,
+            },
+            "insider": {
+                "trend": "stable",
+                "change_percentage": 0.2,
+                "latest": 2.3,
+            },
+            "alerts": [],
+        },
+        "management": {
+            "score": 84.1,
+            "rating": "High",
+            "highlights": ["Management prioritised reinvestment."],
+            "warnings": [],
+        },
+    }
 
     service = StockAnalysisService(opinion_api_key="dummy")
     result = service.analyze("acme")
@@ -130,6 +166,10 @@ def test_analyze_full_flow(
     assert result["technical_analysis"]["signal"]["action"] == "Buy"
     assert result["technical_analysis"]["chart"]["png"].endswith("charts/ACME.png")
     assert result["macro_context"]["alignment"]["risk_bias"] == "balanced"
+    assert result["qualitative_moat"]["moat_rating"] == "Wide Moat"
+    assert result["qualitative_moat"]["overall_score"] == pytest.approx(81.2)
+    assert result["ownership_trends"]["institutional"]["trend"] == "increasing"
+    assert result["management_quality"]["rating"] == "High"
 
     evaluator_cls_mock.assert_called_once()
     features_cls_mock.assert_called_once_with(
@@ -141,6 +181,7 @@ def test_analyze_full_flow(
     )
 
 
+@patch("bd_stockevaluator.core.service._build_qualitative_components")
 @patch("bd_stockevaluator.core.service.MACRO_SERVICE")
 @patch("bd_stockevaluator.core.service.generate_stock_opinion")
 @patch("bd_stockevaluator.core.service.StockAnalysisFeatures")
@@ -156,6 +197,7 @@ def test_analyze_without_opinion(
     features_cls_mock,
     opinion_mock,
     macro_service_mock,
+    qualitative_mock,
 ):
     get_stock_data_mock.return_value = {
         "longName": "Beta Inc",
@@ -242,20 +284,52 @@ def test_analyze_without_opinion(
         "sentiment": {"regime": "neutral"},
         "alignment": {"insights": [], "risk_bias": "balanced"},
     }
+    qualitative_mock.return_value = {
+        "moat": {
+            "overall_score": 62.0,
+            "moat_rating": "Narrow Moat",
+            "dimensions": {},
+        },
+        "ownership": {
+            "institutional": {
+                "trend": "stable",
+                "change_percentage": 0.4,
+                "latest": 54.2,
+            },
+            "insider": {
+                "trend": "stable",
+                "change_percentage": 0.1,
+                "latest": 1.1,
+            },
+            "alerts": [],
+        },
+        "management": {
+            "score": 58.0,
+            "rating": "Moderate",
+            "highlights": [],
+            "warnings": [],
+        },
+    }
 
     service = StockAnalysisService()
     result = service.analyze("beta", include_opinion=False)
 
     assert result["opinion_report"] is None
     opinion_mock.assert_not_called()
+    assert result["qualitative_moat"]["moat_rating"] == "Narrow Moat"
+    assert result["ownership_trends"]["insider"]["latest"] == pytest.approx(1.1)
+    assert result["management_quality"]["rating"] == "Moderate"
 
 
 @patch(
     "bd_stockevaluator.core.service.get_stock_data",
     side_effect=ValueError("Ticker not found"),
 )
+@patch("bd_stockevaluator.core.service._build_qualitative_components")
 @patch("bd_stockevaluator.core.service.MACRO_SERVICE")
-def test_analyze_raises_when_data_missing(macro_service_mock, get_stock_data_mock):
+def test_analyze_raises_when_data_missing(
+    macro_service_mock, _qualitative_mock, get_stock_data_mock
+):
     service = StockAnalysisService()
     with pytest.raises(ValueError):
         service.analyze("missing")

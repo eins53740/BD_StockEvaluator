@@ -64,6 +64,9 @@ class EvaluationResponse(BaseModel):
     trend_analysis: Dict[str, Any]
     comparative_analysis: Dict[str, Any]
     dividend_analysis: Dict[str, Any]
+    qualitative_moat: Dict[str, Any] | None = None
+    ownership_trends: Dict[str, Any] | None = None
+    management_quality: Dict[str, Any] | None = None
 
 
 class FeatureResponse(BaseModel):
@@ -73,6 +76,16 @@ class FeatureResponse(BaseModel):
     trend_analysis: Dict[str, Any]
     comparative_analysis: Dict[str, Any]
     dividend_analysis: Dict[str, Any]
+
+
+class SyncResponse(BaseModel):
+    ticker: str
+    version: str
+    data_providers: Dict[str, Any]
+    fundamentals: Dict[str, Any]
+    price_history: List[Dict[str, Any]]
+    technical_chart: Dict[str, Any]
+    macro_snapshot: Dict[str, Any]
 
 
 def _normalise_ticker(raw: str) -> str:
@@ -140,3 +153,13 @@ def get_features(ticker: str) -> Dict[str, Any]:
         "dividend_analysis": analysis["dividend_analysis"],
     }
     return jsonable_encoder(subset)
+
+
+@app.get("/sync/{ticker}", response_model=SyncResponse)
+def get_sync_payload(ticker: str) -> Dict[str, Any]:
+    normalised = _normalise_ticker(ticker)
+    try:
+        payload = analysis_service.build_sync_payload(normalised)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return jsonable_encoder(payload)

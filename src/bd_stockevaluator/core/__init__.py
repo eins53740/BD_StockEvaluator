@@ -18,6 +18,19 @@ from .data_pipeline import (
     SQLiteDataStore,
 )
 from .macro import MacroContextService
+from .portfolio import (
+    PortfolioAnalytics,
+    PortfolioDataProvider,
+    PortfolioPosition,
+    PortfolioSnapshot,
+    YFinancePortfolioProvider,
+)
+from .portfolio_performance import (
+    PerformanceMetrics,
+    compute_cagr,
+    compute_performance_metrics,
+)
+from .watchlist import WatchlistAlert, WatchlistAlertEngine, UnsupportedOperatorError
 
 __all__ = [
     "StockAnalysisService",
@@ -32,4 +45,15 @@ __all__ = [
     "SchedulerHooks",
     "SQLiteDataStore",
     "MacroContextService",
+    "PortfolioAnalytics",
+    "PortfolioDataProvider",
+    "PortfolioPosition",
+    "PortfolioSnapshot",
+    "YFinancePortfolioProvider",
+    "PerformanceMetrics",
+    "compute_cagr",
+    "compute_performance_metrics",
+    "WatchlistAlert",
+    "WatchlistAlertEngine",
+    "UnsupportedOperatorError",
 ]
