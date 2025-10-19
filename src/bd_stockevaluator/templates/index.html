@@ -194,6 +194,39 @@
         .macro-card ul li {
             margin-bottom: 0.4em;
         }
+        .moat-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+        .moat-table th, .moat-table td {
+            border: 1px solid var(--color-border);
+            padding: 0.6em;
+            text-align: left;
+        }
+        .moat-rating-badge {
+            display: inline-block;
+            padding: 0.4em 1em;
+            border-radius: 999px;
+            background-color: var(--color-report-bg);
+            border: 1px solid var(--color-border);
+            font-weight: 600;
+        }
+        .trend-chip {
+            display: inline-block;
+            padding: 0.25em 0.7em;
+            border-radius: 999px;
+            border: 1px solid var(--color-border);
+            background-color: var(--color-surface);
+            font-size: 0.9em;
+        }
+        .list-clean {
+            margin: 0;
+            padding-left: 1.2em;
+        }
+        .list-clean li {
+            margin-bottom: 0.35em;
+        }
 
         /* Improve Mermaid HTML label readability and spacing */
         .mermaid .label, .mermaid .nodeLabel { line-height: 1.25; }
@@ -1112,6 +1145,125 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if qualitative_moat %}
+            <div class="analysis-section">
+                <h3>🛡️ Moat Assessment</h3>
+                {% if qualitative_moat.overall_score %}
+                <div class="summary-chip">
+                    <span class="moat-rating-badge">{{ qualitative_moat.moat_rating }}</span>
+                    <span class="score-badge score-positive">Score: {{ qualitative_moat.overall_score|round(1) }}</span>
+                </div>
+                {% endif %}
+                {% if qualitative_moat.dimensions %}
+                <table class="moat-table">
+                    <thead>
+                        <tr>
+                            <th>Dimension</th>
+                            <th>Manual (0-5)</th>
+                            <th>AI Signal (0-100)</th>
+                            <th>Blended (0-100)</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, data in qualitative_moat.dimensions.items() %}
+                        <tr>
+                            <td>{{ key.replace('_', ' ')|title }}</td>
+                            <td>
+                                {% if data.manual_score is not none %}
+                                    {{ (data.manual_score / 20)|round(2) }}
+                                {% else %}n/a{% endif %}
+                            </td>
+                            <td>
+                                {% if data.ai_score is not none %}
+                                    {{ data.ai_score|round(1) }}
+                                {% else %}n/a{% endif %}
+                            </td>
+                            <td>
+                                {% if data.combined_score is not none %}
+                                    {{ data.combined_score|round(1) }}
+                                {% else %}n/a{% endif %}
+                            </td>
+                            <td>
+                                {{ data.summary or 'Summary unavailable.' }}
+                                {% if data.notes %}
+                                <ul class="list-clean">
+                                    {% for note in data.notes %}
+                                    <li>{{ note }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if ownership_trends %}
+            <div class="analysis-section">
+                <h3>🏛 Ownership Trends</h3>
+                {% set inst = ownership_trends.get('institutional') or {} %}
+                {% set ins = ownership_trends.get('insider') or {} %}
+                <div class="macro-highlights">
+                    <div class="macro-card">
+                        <h4>Institutional Ownership</h4>
+                        <p><strong>Latest:</strong> {{ inst.get('latest', 'n/a') }}{% if inst.get('latest') is not none %}%{% endif %}</p>
+                        <p><strong>Trend:</strong> {{ inst.get('trend', 'unknown')|replace('_', ' ')|title }}</p>
+                        {% if inst.get('change_percentage') is not none %}
+                        <p><strong>Change:</strong> {{ inst.get('change_percentage')|round(2) }}%</p>
+                        {% endif %}
+                    </div>
+                    <div class="macro-card">
+                        <h4>Insider Ownership</h4>
+                        <p><strong>Latest:</strong> {{ ins.get('latest', 'n/a') }}{% if ins.get('latest') is not none %}%{% endif %}</p>
+                        <p><strong>Trend:</strong> {{ ins.get('trend', 'unknown')|replace('_', ' ')|title }}</p>
+                        {% if ins.get('change_percentage') is not none %}
+                        <p><strong>Change:</strong> {{ ins.get('change_percentage')|round(2) }}%</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if ownership_trends.get('alerts') %}
+                <h4>Alerts</h4>
+                <ul class="list-clean">
+                    {% for alert in ownership_trends.get('alerts') %}
+                    <li>{{ alert }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if management_quality %}
+            <div class="analysis-section">
+                <h3>👥 Management Quality</h3>
+                {% if management_quality.score is not none %}
+                <div class="summary-chip">
+                    <span class="score-badge score-positive">Score: {{ management_quality.score|round(1) }}</span>
+                    <span class="moat-rating-badge">{{ management_quality.rating }}</span>
+                </div>
+                {% endif %}
+                {% if management_quality.highlights %}
+                <h4>Highlights</h4>
+                <ul class="list-clean">
+                    {% for highlight in management_quality.highlights %}
+                    <li>{{ highlight }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if management_quality.warnings %}
+                <h4>Watchouts</h4>
+                <ul class="list-clean">
+                    {% for warning in management_quality.warnings %}
+                    <li>{{ warning }}</li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
             </div>
             {% endif %}

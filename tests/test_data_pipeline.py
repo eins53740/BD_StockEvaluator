@@ -39,6 +39,7 @@ def build_client(
         "exchange_rates": ["fmp", "alpha", "yahoo"],
         "history": ["fmp", "finnhub"],
         "price_history": ["fmp", "yahoo"],
+        "ownership": ["fmp", "yahoo"],
     }
 
     converter = CurrencyConverter({"USD": 1.0, "GBP": 1.25, "EUR": 1.08})
@@ -138,6 +139,18 @@ def test_multi_source_syncs_and_persists(tmp_path):
                         "volume": 980000,
                     },
                 ],
+                "ownership": [
+                    {
+                        "date": "2024-06-30",
+                        "institutional": 64.5,
+                        "insider": 2.2,
+                    },
+                    {
+                        "date": "2024-07-31",
+                        "institutional": 65.8,
+                        "insider": 2.3,
+                    },
+                ],
             },
         ),
         "alpha": StubProvider(
@@ -172,6 +185,11 @@ def test_multi_source_syncs_and_persists(tmp_path):
     assert price_history
     assert price_history[-1]["close"] == pytest.approx(150.0)
 
+    ownership_history = info.get("ownershipHistory")
+    assert ownership_history
+    assert ownership_history[-1]["institutional"] == pytest.approx(65.8)
+    assert ownership_history[-1]["insider"] == pytest.approx(2.3)
+
     historical = info.get("historicalMetrics")
     assert historical
     assert historical[0]["period"] == "FY2023"
@@ -194,6 +212,11 @@ def test_multi_source_syncs_and_persists(tmp_path):
     assert price["currency"] == "USD"
     assert price["close"] == pytest.approx(150.0)
     assert price["close_eur"] == pytest.approx(138.8889, rel=1e-4)
+
+    ownership_rows = store.load_ownership_history("ACME")
+    assert ownership_rows
+    assert ownership_rows[-1]["institutional"] == pytest.approx(65.8)
+    assert ownership_rows[-1]["insider"] == pytest.approx(2.3)
 
     meta = store.load_provider_meta("fmp", "fundamentals")
     assert meta["last_success"] is not None

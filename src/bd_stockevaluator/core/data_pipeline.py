@@ -8,7 +8,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, MutableMapping, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+)
 
 import requests
 import yfinance as yf
@@ -23,6 +32,7 @@ DEFAULT_PRECEDENCE: Dict[str, Sequence[str]] = {
     "exchange_rates": ("fmp", "alpha"),
     "history": ("fmp", "finnhub", "alpha"),
     "price_history": ("fmp", "yahoo"),
+    "ownership": ("fmp", "yahoo"),
 }
 
 
@@ -225,6 +235,19 @@ class SQLiteDataStore:
                 last_failure TEXT,
                 message TEXT,
                 PRIMARY KEY (provider, category)
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ownership_history (
+                ticker TEXT NOT NULL,
+                as_of TEXT NOT NULL,
+                source TEXT,
+                institutional REAL,
+                insider REAL,
+                PRIMARY KEY (ticker, as_of, source)
             )
             """
         )
@@ -596,6 +619,88 @@ class SQLiteDataStore:
             "last_failure": None,
             "message": None,
         }
+
+    def save_ownership_history(
+        self,
+        ticker: str,
+        history_entries: Sequence[Mapping[str, Any]],
+        provider: Optional[str],
+        as_of: datetime,
+    ) -> None:
+        if not history_entries:
+            return
+        source = provider or "unknown"
+        with self._conn:
+            for entry in history_entries:
+                date_value = entry.get("date") or entry.get("as_of")
+                if not date_value:
+                    continue
+                if isinstance(date_value, datetime):
+                    as_iso = _to_iso(date_value)
+                else:
+                    try:
+                        as_iso = _to_iso(_from_iso(str(date_value)))
+                    except Exception:
+                        as_iso = str(date_value)
+                institutional = entry.get("institutional")
+                insider = entry.get("insider")
+                try:
+                    inst_val = (
+                        float(institutional) if institutional is not None else None
+                    )
+                except (TypeError, ValueError):
+                    inst_val = None
+                try:
+                    insider_val = float(insider) if insider is not None else None
+                except (TypeError, ValueError):
+                    insider_val = None
+                if inst_val is None and insider_val is None:
+                    continue
+                self._conn.execute(
+                    """
+                    INSERT INTO ownership_history (
+                        ticker,
+                        as_of,
+                        source,
+                        institutional,
+                        insider
+                    ) VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(ticker, as_of, source) DO UPDATE SET
+                        institutional=excluded.institutional,
+                        insider=excluded.insider
+                    """,
+                    (ticker, as_iso, source, inst_val, insider_val),
+                )
+
+    def load_ownership_history(self, ticker: str) -> List[Dict[str, Any]]:
+        rows = self._conn.execute(
+            """
+            SELECT as_of, source, institutional, insider
+            FROM ownership_history
+            WHERE ticker = ?
+            ORDER BY as_of ASC
+            """,
+            (ticker,),
+        ).fetchall()
+        history: List[Dict[str, Any]] = []
+        for row in rows:
+            raw_date = row["as_of"]
+            try:
+                date_val = _from_iso(raw_date)
+            except Exception:
+                try:
+                    date_val = datetime.fromisoformat(raw_date)
+                except Exception:
+                    continue
+            history.append(
+                {
+                    "date": date_val,
+                    "source": row["source"],
+                    "institutional": row["institutional"],
+                    "insider": row["insider"],
+                }
+            )
+        return history
 
     def save_macro_series(
         self,
@@ -1390,6 +1495,18 @@ class MultiSourceDataClient:
                 as_of_dt,
                 converter,
             )
+        if aggregated.get("ownership"):
+            ownership_payload = aggregated["ownership"]
+            if isinstance(ownership_payload, dict):
+                ownership_entries = [ownership_payload]
+            else:
+                ownership_entries = list(ownership_payload)
+            self.store.save_ownership_history(
+                ticker,
+                ownership_entries,
+                providers_used.get("ownership"),
+                as_of_dt,
+            )
 
         return self._build_stock_info(snapshot)
 
@@ -1546,6 +1663,7 @@ class MultiSourceDataClient:
             "profile": snapshot.providers.get("profile"),
             "history": snapshot.providers.get("history"),
             "price_history": snapshot.providers.get("price_history"),
+            "ownership": snapshot.providers.get("ownership"),
         }
         info["data_providers"] = {
             key: (value or "unavailable") for key, value in data_providers.items()
@@ -1585,6 +1703,17 @@ class MultiSourceDataClient:
         info["exchange"] = profile.get("exchange")
         info["marketCap"] = profile.get("marketCap")
         info["country"] = profile.get("country")
+
+        ownership_rows = self.store.load_ownership_history(snapshot.ticker)
+        info["ownershipHistory"] = [
+            {
+                "date": row["date"].isoformat().replace("+00:00", "Z"),
+                "source": row.get("source"),
+                "institutional": row.get("institutional"),
+                "insider": row.get("insider"),
+            }
+            for row in ownership_rows
+        ]
 
         return info
 

@@ -11,10 +11,17 @@ future enhancements.
 from __future__ import annotations
 
 import datetime as _dt
+import json
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Any, Iterable, List, Mapping, Optional, Sequence
+
+import pandas as pd
+
+from bd_stockevaluator.core.portfolio import PortfolioAnalytics, PortfolioSnapshot
+from bd_stockevaluator.core.service import StockAnalysisService
+from .portfolio_automation import PortfolioDigest, generate_portfolio_report
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CURRENT_DIR = PROJECT_ROOT / "reports"
@@ -71,7 +78,10 @@ def my_holdings() -> str:
 
 
 def send_email_daily(
-    *, xlsx_file: Path | None = None, body_data: str | None = None
+    *,
+    xlsx_file: Path | None = None,
+    body_data: str | None = None,
+    attachments: Sequence[Path] | None = None,
 ) -> None:
     """Send the generated report.  Stubbed out for offline usage."""
 
@@ -92,11 +102,79 @@ def _combine_sections(sections: Iterable[str]) -> str:
     return "\n\n".join(section for section in sections if section)
 
 
+def _load_watchlist_config(path: Path) -> List[Mapping[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    if isinstance(data, list):
+        return [entry for entry in data if isinstance(entry, Mapping)]
+    if isinstance(data, Mapping):
+        watchlist = data.get("watchlist")
+        if isinstance(watchlist, list):
+            return [entry for entry in watchlist if isinstance(entry, Mapping)]
+    return []
+
+
+def portfolio_automation(
+    *,
+    snapshot: PortfolioSnapshot | None = None,
+    portfolio_series: Optional[pd.Series] = None,
+    benchmark_series: Optional[pd.Series] = None,
+    alerts: Optional[Sequence[str]] = None,
+    macro_context: Optional[Mapping[str, Any]] = None,
+) -> PortfolioDigest | None:
+    """
+    Generate the automated portfolio digest if inputs are available.
+
+    The function falls back to configured defaults so automated tests can
+    exercise the workflow without network access.
+    """
+
+    if snapshot is None:
+        default_portfolio = PROJECT_ROOT / "config" / "portfolio.csv"
+        if not default_portfolio.exists():
+            return None
+        try:
+            snapshot = PortfolioAnalytics().load(default_portfolio)
+        except Exception:
+            return None
+
+    alert_payload = alerts
+    if alert_payload is None:
+        watchlist_path = PROJECT_ROOT / "config" / "watchlist.json"
+        watchlist_config = _load_watchlist_config(watchlist_path)
+        if watchlist_config:
+            try:
+                service = StockAnalysisService()
+                alert_payload, _ = service.evaluate_watchlist(
+                    watchlist_config, include_opinion=False
+                )
+            except Exception:
+                alert_payload = []
+
+    try:
+        digest = generate_portfolio_report(
+            snapshot,
+            portfolio_series=portfolio_series,
+            benchmark_series=benchmark_series,
+            alerts=alert_payload,
+            macro_context=macro_context,
+            output_dir=CURRENT_DIR,
+        )
+    except Exception:
+        return None
+    return digest
+
+
 def daily_report(
     *,
     run_prices: bool = True,
     run_fundamentals: bool = True,
     run_my_holdings: bool = True,
+    run_portfolio_automation: bool = True,
     run_email: bool = False,
 ) -> dict:
     """
@@ -114,17 +192,29 @@ def daily_report(
     if run_my_holdings:
         generated_sections.append(my_holdings())
 
+    portfolio_digest: PortfolioDigest | None = None
+    if run_portfolio_automation:
+        portfolio_digest = portfolio_automation()
+        if portfolio_digest:
+            generated_sections.append(portfolio_digest.html)
+
     body_data = _combine_sections(generated_sections)
     xlsx_file = CURRENT_DIR / "fundamental_metrics_yfinance.xlsx"
 
     if run_email:
-        send_email_daily(xlsx_file=xlsx_file, body_data=body_data)
+        attachments = [portfolio_digest.pdf_path] if portfolio_digest else None
+        send_email_daily(
+            xlsx_file=xlsx_file,
+            body_data=body_data,
+            attachments=attachments,
+        )
 
     return {
         "body": body_data,
         "xlsx_file": xlsx_file,
         "sections": generated_sections,
         "sent_email": run_email,
+        "portfolio_digest": portfolio_digest,
     }
 
 

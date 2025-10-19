@@ -17,6 +17,11 @@ This project is a full-stack stock evaluation tool with a Python backend and a n
 
 The backend provides a web UI and a REST API.
 
+**Watchlist alerts**
+- Configure automated alerts for the daily portfolio digest by editing `config/watchlist.json`.
+- Each entry defines a `ticker`, notification `channels`, and rule set using dot-delimited paths into the analysis payload (see `bd_stockevaluator/core/watchlist.py` for supported operators).
+- The daily report picks up this file automatically; leave it untouched if you prefer to disable alert-based messaging.
+
 **For detailed instructions on setup, usage, and customization, see [QUICK_START.md](QUICK_START.md).**
 
 **Quick steps:**
