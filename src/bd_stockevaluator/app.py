@@ -31,12 +31,14 @@ except ImportError:  # pragma: no cover - fallback for direct script execution
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TEMPLATES_DIR = PACKAGE_ROOT / "templates"
+STATIC_DIR = PACKAGE_ROOT / "static"
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 app = Flask(
     __name__,
-    template_folder=str(PROJECT_ROOT / "templates"),
-    static_folder=str(PROJECT_ROOT / "static"),
+    template_folder=str(TEMPLATES_DIR),
+    static_folder=str(STATIC_DIR),
 )
 app.secret_key = os.environ.get("SECRET_KEY", "a-default-secret-key-for-dev-only")
 

@@ -28,6 +28,7 @@ from .data_pipeline import (
 from .keys import get_api_key
 from .macro import MacroContextService
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 ENV_PATH = PROJECT_ROOT / ".env"
@@ -60,7 +61,7 @@ except Exception:  # Markdown optional
 DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-STATIC_DIR = PROJECT_ROOT / "static"
+STATIC_DIR = PACKAGE_ROOT / "static"
 
 DEFAULT_RATES = {
     "USD": 1.0,

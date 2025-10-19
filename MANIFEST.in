@@ -1,0 +1,2 @@
+recursive-include src/bd_stockevaluator/templates *.html
+recursive-include src/bd_stockevaluator/static *
