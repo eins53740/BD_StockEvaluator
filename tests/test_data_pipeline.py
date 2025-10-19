@@ -28,7 +28,9 @@ class StubProvider:
         return copy.deepcopy(self._payloads)
 
 
-def build_client(store: SQLiteDataStore, providers: Dict[str, StubProvider]) -> MultiSourceDataClient:
+def build_client(
+    store: SQLiteDataStore, providers: Dict[str, StubProvider]
+) -> MultiSourceDataClient:
     precedence = {
         "prices": ["fmp", "yahoo", "alpha"],
         "fundamentals": ["fmp", "finnhub", "alpha", "yahoo"],
@@ -36,7 +38,6 @@ def build_client(store: SQLiteDataStore, providers: Dict[str, StubProvider]) -> 
         "profile": ["fmp", "yahoo"],
         "exchange_rates": ["fmp", "alpha", "yahoo"],
         "history": ["fmp", "finnhub"],
-        "price_history": ["fmp", "yahoo"],
         "price_history": ["fmp", "yahoo"],
     }
 

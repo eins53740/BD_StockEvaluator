@@ -11,9 +11,12 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BASE_DIR / ".env", override=False)
-sys.path.insert(0, str(BASE_DIR))
 
-from core import StockAnalysisService  # noqa: E402  pylint: disable=wrong-import-position
+try:
+    from bd_stockevaluator.core import StockAnalysisService
+except ImportError:  # pragma: no cover - development fallback
+    sys.path.insert(0, str(BASE_DIR / "src"))
+    from bd_stockevaluator.core import StockAnalysisService
 
 
 def summarise_analysis(payload: dict) -> dict:
@@ -68,7 +71,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    tickers = args.tickers or os.environ.get("SMOKE_TICKERS", "AAPL,MSFT,TSLA").split(",")
+    tickers = args.tickers or os.environ.get("SMOKE_TICKERS", "AAPL,MSFT,TSLA").split(
+        ","
+    )
     run_smoke_test(tickers, include_opinion=args.include_opinion)
 
 

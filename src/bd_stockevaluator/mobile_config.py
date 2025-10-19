@@ -6,12 +6,13 @@ import os
 import json
 from typing import Dict, Any
 
+
 class MobileConfig:
     """
     Configuration class for mobile deployment and APK generation.
     Handles responsive design, offline capabilities, and mobile-specific features.
     """
-    
+
     @staticmethod
     def generate_pwa_manifest() -> Dict[str, Any]:
         """Generate Progressive Web App manifest for mobile installation"""
@@ -31,71 +32,71 @@ class MobileConfig:
                     "src": "/static/icons/icon-72x72.png",
                     "sizes": "72x72",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-96x96.png",
                     "sizes": "96x96",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-128x128.png",
                     "sizes": "128x128",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-144x144.png",
                     "sizes": "144x144",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-152x152.png",
                     "sizes": "152x152",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-192x192.png",
                     "sizes": "192x192",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-384x384.png",
                     "sizes": "384x384",
                     "type": "image/png",
-                    "purpose": "maskable any"
+                    "purpose": "maskable any",
                 },
                 {
                     "src": "/static/icons/icon-512x512.png",
                     "sizes": "512x512",
                     "type": "image/png",
-                    "purpose": "maskable any"
-                }
+                    "purpose": "maskable any",
+                },
             ],
             "screenshots": [
                 {
                     "src": "/static/screenshots/desktop.png",
                     "sizes": "1280x720",
                     "type": "image/png",
-                    "form_factor": "wide"
+                    "form_factor": "wide",
                 },
                 {
                     "src": "/static/screenshots/mobile.png",
                     "sizes": "375x667",
                     "type": "image/png",
-                    "form_factor": "narrow"
-                }
-            ]
+                    "form_factor": "narrow",
+                },
+            ],
         }
-    
+
     @staticmethod
     def generate_service_worker() -> str:
         """Generate service worker for offline functionality"""
-        return '''
+        return """
 // Stock Evaluator Service Worker
 // Provides offline functionality and caching
 
@@ -247,12 +248,12 @@ self.addEventListener('push', event => {
         );
     }
 });
-'''
-    
+"""
+
     @staticmethod
     def generate_cordova_config() -> str:
         """Generate Cordova config.xml for APK generation"""
-        return '''<?xml version='1.0' encoding='utf-8'?>
+        return """<?xml version='1.0' encoding='utf-8'?>
 <widget id="com.brunodias.stockevaluator" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Stock Evaluator</name>
     <description>
@@ -323,43 +324,44 @@ self.addEventListener('push', event => {
     <plugin name="cordova-plugin-vibration" spec="3" />
     <plugin name="cordova-plugin-inappbrowser" spec="4" />
 </widget>
-'''
+"""
 
     @staticmethod
     def create_mobile_deployment_files(base_path: str):
         """Create all necessary files for mobile deployment"""
-        
+
         # Create directories
-        static_dir = os.path.join(base_path, 'static')
-        icons_dir = os.path.join(static_dir, 'icons')
+        static_dir = os.path.join(base_path, "static")
+        icons_dir = os.path.join(static_dir, "icons")
         os.makedirs(icons_dir, exist_ok=True)
-        
+
         # Generate PWA manifest
-        manifest_path = os.path.join(static_dir, 'manifest.json')
-        with open(manifest_path, 'w') as f:
+        manifest_path = os.path.join(static_dir, "manifest.json")
+        with open(manifest_path, "w") as f:
             json.dump(MobileConfig.generate_pwa_manifest(), f, indent=2)
-        
+
         # Generate service worker
-        sw_path = os.path.join(static_dir, 'sw.js')
-        with open(sw_path, 'w') as f:
+        sw_path = os.path.join(static_dir, "sw.js")
+        with open(sw_path, "w") as f:
             f.write(MobileConfig.generate_service_worker())
-        
+
         # Generate Cordova config
-        config_path = os.path.join(base_path, 'config.xml')
-        with open(config_path, 'w') as f:
+        config_path = os.path.join(base_path, "config.xml")
+        with open(config_path, "w") as f:
             f.write(MobileConfig.generate_cordova_config())
-        
+
         print(f"Mobile deployment files created in {base_path}")
         print("Files created:")
         print(f"  - {manifest_path}")
         print(f"  - {sw_path}")
         print(f"  - {config_path}")
-        
+
         return {
-            'manifest': manifest_path,
-            'service_worker': sw_path,
-            'cordova_config': config_path
+            "manifest": manifest_path,
+            "service_worker": sw_path,
+            "cordova_config": config_path,
         }
+
 
 if __name__ == "__main__":
     # Create mobile deployment files

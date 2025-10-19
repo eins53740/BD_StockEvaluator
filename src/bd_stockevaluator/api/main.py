@@ -108,7 +108,9 @@ def health() -> Dict[str, Any]:
 def evaluate(request: EvaluateRequest) -> Dict[str, Any]:
     ticker = _normalise_ticker(request.ticker)
     try:
-        analysis = analysis_service.analyze(ticker, include_opinion=request.include_opinion)
+        analysis = analysis_service.analyze(
+            ticker, include_opinion=request.include_opinion
+        )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

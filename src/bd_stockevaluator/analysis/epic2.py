@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from statistics import mean
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..core.benchmarks import get_benchmark_value
@@ -179,7 +178,9 @@ class Epic2Analyzer:
         self._series_cache[cache_key] = series
         return series
 
-    def _history_average(self, keys: Sequence[str], window: int = 10) -> Optional[float]:
+    def _history_average(
+        self, keys: Sequence[str], window: int = 10
+    ) -> Optional[float]:
         series = self._history_series(*keys)
         if not series:
             return None
@@ -232,7 +233,8 @@ class Epic2Analyzer:
     def _valuation_scorecard(self) -> Dict[str, Any]:
         metrics = {
             "pe": {
-                "current": self.stock_info.get("trailingPE") or self.stock_info.get("pe"),
+                "current": self.stock_info.get("trailingPE")
+                or self.stock_info.get("pe"),
                 "benchmark_key": ("valuation", "pe"),
                 "history_keys": ("pe", "trailingPE"),
                 "higher_is_better": False,
@@ -310,7 +312,8 @@ class Epic2Analyzer:
     def _profitability_and_stability(self) -> Dict[str, Any]:
         metrics = {
             "roe": {
-                "current": self.stock_info.get("returnOnEquity") or self.stock_info.get("returnOnEquityTTM"),
+                "current": self.stock_info.get("returnOnEquity")
+                or self.stock_info.get("returnOnEquityTTM"),
                 "benchmark_key": ("profitability", "roe"),
                 "history_keys": ("roe", "returnOnEquity"),
                 "higher_is_better": True,
@@ -328,7 +331,8 @@ class Epic2Analyzer:
                 "higher_is_better": True,
             },
             "operating_margin": {
-                "current": self.stock_info.get("operatingMargins") or self.stock_info.get("operatingMargin"),
+                "current": self.stock_info.get("operatingMargins")
+                or self.stock_info.get("operatingMargin"),
                 "benchmark_key": ("profitability", "operating_margin"),
                 "history_keys": ("operating_margin", "operatingMargins"),
                 "higher_is_better": True,
@@ -417,8 +421,16 @@ class Epic2Analyzer:
         for name, meta in growth_metrics.items():
             cagr_5 = self._compute_cagr(meta["history_keys"], horizon=5)
             cagr_10 = self._compute_cagr(meta["history_keys"], horizon=10)
-            sector_5 = get_benchmark_value(self.sector, meta["benchmark_keys"][0], f"{meta['benchmark_keys'][1]}_5y")
-            sector_10 = get_benchmark_value(self.sector, meta["benchmark_keys"][0], f"{meta['benchmark_keys'][1]}_10y")
+            sector_5 = get_benchmark_value(
+                self.sector,
+                meta["benchmark_keys"][0],
+                f"{meta['benchmark_keys'][1]}_5y",
+            )
+            sector_10 = get_benchmark_value(
+                self.sector,
+                meta["benchmark_keys"][0],
+                f"{meta['benchmark_keys'][1]}_10y",
+            )
 
             figure = GrowthFigure(
                 cagr_5y=cagr_5,
@@ -436,8 +448,14 @@ class Epic2Analyzer:
                 score_components.append(
                     _relative_score(cagr_10, sector_10, higher_is_better=True)
                 )
-            score_components = [score for score in score_components if score is not None]
-            blended = round(sum(score_components) / len(score_components), 2) if score_components else None
+            score_components = [
+                score for score in score_components if score is not None
+            ]
+            blended = (
+                round(sum(score_components) / len(score_components), 2)
+                if score_components
+                else None
+            )
             if blended is not None:
                 total_scores.append(blended)
 
@@ -450,7 +468,9 @@ class Epic2Analyzer:
                 "score": blended,
             }
 
-        overall = round(sum(total_scores) / len(total_scores), 2) if total_scores else None
+        overall = (
+            round(sum(total_scores) / len(total_scores), 2) if total_scores else None
+        )
 
         return {
             "overall_score": overall,
@@ -465,8 +485,7 @@ class Epic2Analyzer:
         dividend_yield = _safe_float(self.stock_info.get("dividendYield"))
         payout_ratio = _safe_float(self.stock_info.get("payoutRatio"))
         fcf_yield = _safe_float(
-            self.stock_info.get("fcfYield")
-            or self.stock_info.get("freeCashFlowYield")
+            self.stock_info.get("fcfYield") or self.stock_info.get("freeCashFlowYield")
         )
 
         price = self.price or 0.0
@@ -492,7 +511,9 @@ class Epic2Analyzer:
                 discounted_sum += discounted
             terminal_base = fcf_per_share * (1 + growth_rate) ** years
             terminal_value = (
-                terminal_base * (1 + terminal_growth) / (discount_rate - terminal_growth)
+                terminal_base
+                * (1 + terminal_growth)
+                / (discount_rate - terminal_growth)
             )
             terminal_discounted = terminal_value / ((1 + discount_rate) ** years)
             intrinsic_value = discounted_sum + terminal_discounted
@@ -548,7 +569,9 @@ class Epic2Analyzer:
             div_growth = min(div_growth, 0.08)
             discount_rate = 0.095
             if discount_rate > div_growth:
-                ddm_value = dividend_per_share * (1 + div_growth) / (discount_rate - div_growth)
+                ddm_value = (
+                    dividend_per_share * (1 + div_growth) / (discount_rate - div_growth)
+                )
                 models["ddm"] = {
                     "value": round(ddm_value, 2),
                     "margin_of_safety_price": round(ddm_value * 0.75, 2),

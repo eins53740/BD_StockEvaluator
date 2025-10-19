@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Iterable, List, MutableMapping, Optional, Sequence
+from typing import Dict, List, MutableMapping, Optional, Sequence
 
 from ..core.data_pipeline import SQLiteDataStore, _to_iso
 
@@ -32,12 +32,15 @@ class MacroSnapshotBuilder:
         self.store = store
         self._series_meta: Dict[str, Dict[str, Optional[str]]] = {}
 
-    def ingest_series(self, series: MacroSeries, *, as_of: Optional[datetime] = None) -> None:
+    def ingest_series(
+        self, series: MacroSeries, *, as_of: Optional[datetime] = None
+    ) -> None:
         if not series.points:
             return
         ingested_at = _ensure_aware(as_of or datetime.now(timezone.utc))
         payload = [
-            {"date": point.date, "value": point.value} for point in sorted(series.points, key=lambda p: p.date)
+            {"date": point.date, "value": point.value}
+            for point in sorted(series.points, key=lambda p: p.date)
         ]
         self.store.save_macro_series(
             series.series_id,
@@ -63,7 +66,9 @@ class MacroSnapshotBuilder:
             previous = records[-2] if len(records) > 1 else None
             change = (
                 latest["value"] - previous["value"]
-                if previous and latest["value"] is not None and previous["value"] is not None
+                if previous
+                and latest["value"] is not None
+                and previous["value"] is not None
                 else 0.0
             )
             trend = _describe_trend(series_id, change)
@@ -102,7 +107,9 @@ def _describe_trend(series_id: str, delta: float) -> str:
 class RecessionSignalCalculator:
     """Derive recession alert signals from macro time series."""
 
-    def evaluate(self, series_map: MutableMapping[str, Sequence[MacroDataPoint]]) -> Dict[str, Dict[str, object]]:
+    def evaluate(
+        self, series_map: MutableMapping[str, Sequence[MacroDataPoint]]
+    ) -> Dict[str, Dict[str, object]]:
         sahm = self._sahm_rule(series_map.get("unemployment_rate", ()))
         curve = self._yield_curve(series_map.get("yield_curve_spread", ()))
         buffett = self._buffett_indicator(series_map.get("buffett_indicator", ()))
@@ -115,14 +122,21 @@ class RecessionSignalCalculator:
     @staticmethod
     def _sahm_rule(points: Sequence[MacroDataPoint]) -> Dict[str, object]:
         if len(points) < 3:
-            return {"triggered": False, "gap": 0.0, "latest_average": None, "min_average": None}
+            return {
+                "triggered": False,
+                "gap": 0.0,
+                "latest_average": None,
+                "min_average": None,
+            }
         sorted_points = sorted(points, key=lambda p: p.date)
         trailing_avgs: List[float] = []
         for idx in range(2, len(sorted_points)):
             window = sorted_points[idx - 2 : idx + 1]
             trailing_avgs.append(sum(point.value for point in window) / 3)
         latest_avg = trailing_avgs[-1]
-        recent_window = trailing_avgs[-12:] if len(trailing_avgs) >= 12 else trailing_avgs
+        recent_window = (
+            trailing_avgs[-12:] if len(trailing_avgs) >= 12 else trailing_avgs
+        )
         min_avg = min(recent_window) if recent_window else latest_avg
         gap = latest_avg - min_avg
         return {
@@ -164,7 +178,9 @@ class RecessionSignalCalculator:
 class SentimentTracker:
     """Combine valuation and flow metrics into a sentiment regime."""
 
-    def summarise(self, series_map: MutableMapping[str, Sequence[MacroDataPoint]]) -> Dict[str, object]:
+    def summarise(
+        self, series_map: MutableMapping[str, Sequence[MacroDataPoint]]
+    ) -> Dict[str, object]:
         valuation_state = "neutral"
         valuation_latest = None
         valuations = series_map.get("global_valuation_percentile", ())
@@ -223,37 +239,61 @@ class ForecastAlignmentEngine:
         fed = dashboard.get("fed_funds_rate")
         if fed and fed.get("trend") == "rising":
             if revenue_trend is not None and revenue_trend < 0:
-                insights.append("Rising rates coincide with revenue contraction — monitor financing costs.")
+                insights.append(
+                    "Rising rates coincide with revenue contraction — monitor financing costs."
+                )
                 risk_bias = "macro_headwinds"
             else:
-                insights.append("Rising rates have not derailed top-line momentum so far.")
+                insights.append(
+                    "Rising rates have not derailed top-line momentum so far."
+                )
 
         gdp = dashboard.get("gdp_growth")
         if gdp and gdp.get("trend") == "cooling":
             if revenue_trend is not None and revenue_trend < 0:
-                insights.append("Cooling GDP growth lines up with weakening company revenues.")
+                insights.append(
+                    "Cooling GDP growth lines up with weakening company revenues."
+                )
                 risk_bias = "macro_headwinds"
             elif revenue_trend is not None and revenue_trend > 0:
                 insights.append("Company is outgrowing a cooling macro backdrop.")
 
         cpi = dashboard.get("cpi")
-        if cpi and cpi.get("trend") == "cooling" and fcf_trend is not None and fcf_trend > 0:
-            insights.append("Disinflation plus improving free cash flow support margin resilience.")
+        if (
+            cpi
+            and cpi.get("trend") == "cooling"
+            and fcf_trend is not None
+            and fcf_trend > 0
+        ):
+            insights.append(
+                "Disinflation plus improving free cash flow support margin resilience."
+            )
             if risk_bias != "macro_headwinds":
                 risk_bias = "macro_tailwinds"
 
         eps_note_added = False
         if eps_trend is not None:
             fed_trend = fed.get("trend") if fed else None
-            if fed_trend == "rising" and eps_trend < 0 and "macro_headwinds" != risk_bias:
+            if (
+                fed_trend == "rising"
+                and eps_trend < 0
+                and "macro_headwinds" != risk_bias
+            ):
                 insights.append("Earnings under pressure amid tighter monetary policy.")
                 risk_bias = "macro_headwinds"
                 eps_note_added = True
-        if fcf_trend is not None and fcf_trend < 0 and risk_bias == "balanced" and not eps_note_added:
+        if (
+            fcf_trend is not None
+            and fcf_trend < 0
+            and risk_bias == "balanced"
+            and not eps_note_added
+        ):
             insights.append("Free cash flow softening despite neutral macro reads.")
 
         if not insights:
-            insights.append("Macro alignment appears balanced with no clear headwinds or tailwinds.")
+            insights.append(
+                "Macro alignment appears balanced with no clear headwinds or tailwinds."
+            )
 
         return {
             "insights": insights,

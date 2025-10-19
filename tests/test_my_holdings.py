@@ -43,8 +43,7 @@ def test_my_holdings_generates_report(tmp_path, monkeypatch):
 
     portfolio_csv = tmp_path / "portfolio.csv"
     portfolio_csv.write_text(
-        "ticker,quantity,buy_price,buy_date,currency\n"
-        "AAPL,5,100,2023-01-01,USD\n",
+        "ticker,quantity,buy_price,buy_date,currency\n" "AAPL,5,100,2023-01-01,USD\n",
         encoding="utf-8",
     )
 

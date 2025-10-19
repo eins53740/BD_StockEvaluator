@@ -11,7 +11,7 @@ import pytest
 
 # Add utils to path
 REPO_ROOT = Path(__file__).resolve().parents[1]
-utils_path = REPO_ROOT / 'utils'
+utils_path = REPO_ROOT / "utils"
 if str(utils_path) not in sys.path:
     sys.path.insert(0, str(utils_path))
 
@@ -36,7 +36,9 @@ def test_single_ticker():
         pytest.skip(f"download_data_robust raised an exception: {exc}")
 
     if data is None or getattr(data, "empty", True):
-        print(f"?? Could not download data for {symbol} - this may be expected due to rate limits")
+        print(
+            f"?? Could not download data for {symbol} - this may be expected due to rate limits"
+        )
         pytest.skip("download_data_robust returned no data; likely rate limited.")
 
     print(f"? Success! Downloaded {len(data)} days of data for {symbol}")
@@ -66,10 +68,12 @@ def test_ticker_info():
         print(f"?? Failed to get info for {symbol}")
         pytest.skip("get_ticker_info_robust returned no data; likely rate limited.")
 
-    company_name = info.get('longName', 'Unknown')
-    sector = info.get('sector', 'Unknown')
+    company_name = info.get("longName", "Unknown")
+    sector = info.get("sector", "Unknown")
     print(f"? Success! Got info for {company_name} in {sector} sector")
-    assert isinstance(info, dict) and info, "get_ticker_info_robust returned unexpected payload"
+    assert (
+        isinstance(info, dict) and info
+    ), "get_ticker_info_robust returned unexpected payload"
 
 
 def test_european_ticker():
@@ -92,11 +96,15 @@ def test_european_ticker():
         pytest.skip(f"download_data_robust raised an exception: {exc}")
 
     if data is None or getattr(data, "empty", True):
-        print(f"?? Could not download data for {symbol} - this may be expected due to rate limits")
+        print(
+            f"?? Could not download data for {symbol} - this may be expected due to rate limits"
+        )
         pytest.skip("download_data_robust returned no data; likely rate limited.")
 
     print(f"? Success! Downloaded {len(data)} days of data for {symbol}")
-    assert not data.empty, "download_data_robust returned an empty DataFrame for INGA.AS"
+    assert (
+        not data.empty
+    ), "download_data_robust returned an empty DataFrame for INGA.AS"
 
 
 def main():

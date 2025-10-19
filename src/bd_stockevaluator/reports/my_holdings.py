@@ -18,6 +18,7 @@ import pandas as pd
 try:  # Optional dependency in CI
     from forex_python.converter import CurrencyRates  # type: ignore
 except Exception:  # pragma: no cover - fallback when package missing
+
     class CurrencyRates:  # type: ignore
         def get_rate(self, src: str, dst: str) -> float:
             return 1.0
@@ -29,6 +30,7 @@ except Exception:  # pragma: no cover - fallback when package missing
 try:  # Optional dependency in CI
     import matplotlib  # type: ignore
 except Exception:  # pragma: no cover - fallback stub
+
     class _MatplotlibStub:
         def use(self, *_args, **_kwargs):
             return None
@@ -38,6 +40,7 @@ except Exception:  # pragma: no cover - fallback stub
 try:
     import yfinance as yf  # type: ignore
 except Exception:  # pragma: no cover - fallback stub
+
     class _YFinanceStub:  # type: ignore
         class Ticker:
             def __init__(self, symbol: str) -> None:
@@ -54,7 +57,9 @@ def _read_portfolio(path: str | Path) -> pd.DataFrame:
     expected = {"ticker", "quantity", "buy_price", "buy_date", "currency"}
     missing = expected.difference(df.columns)
     if missing:
-        raise ValueError(f"Portfolio file missing columns: {', '.join(sorted(missing))}")
+        raise ValueError(
+            f"Portfolio file missing columns: {', '.join(sorted(missing))}"
+        )
     return df
 
 
@@ -65,7 +70,9 @@ def _latest_price(ticker: str) -> float:
     return float(history["Close"].iloc[-1])
 
 
-def store_plot_portfolio(*, date: _dt.date | None = None, value: float = 0.0, plot_en: bool = True) -> Path:
+def store_plot_portfolio(
+    *, date: _dt.date | None = None, value: float = 0.0, plot_en: bool = True
+) -> Path:
     """
     Persist placeholder portfolio plot data.
 
@@ -84,7 +91,9 @@ def store_plot_portfolio(*, date: _dt.date | None = None, value: float = 0.0, pl
     return output_file
 
 
-def get_deltas_portfolio(db_path: str | None = None) -> Tuple[float, float, float, float]:
+def get_deltas_portfolio(
+    db_path: str | None = None,
+) -> Tuple[float, float, float, float]:
     """
     Placeholder for historical delta calculations.
 
@@ -101,7 +110,9 @@ def _format_currency(value: float) -> str:
     return f"${value:,.2f}"
 
 
-def my_holdings(*, portfolio: str, db_path: str | None = None, plot_en: bool = True) -> str:
+def my_holdings(
+    *, portfolio: str, db_path: str | None = None, plot_en: bool = True
+) -> str:
     """
     Generate a lightweight HTML summary of the investor's holdings.
 

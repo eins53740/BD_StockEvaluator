@@ -11,7 +11,9 @@ def test_daily_report_cli_main_sets_utf8(monkeypatch):
     called = {}
 
     dummy_module = types.SimpleNamespace(main=lambda: called.setdefault("main", True))
-    monkeypatch.setattr(daily_report_cli, "_load_daily_report_module", lambda: dummy_module)
+    monkeypatch.setattr(
+        daily_report_cli, "_load_daily_report_module", lambda: dummy_module
+    )
 
     daily_report_cli.main()
 

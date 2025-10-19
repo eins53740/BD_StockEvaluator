@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -26,7 +26,9 @@ def test_evaluate_endpoint_success(service_mock):
         "dividend_analysis": {},
     }
 
-    response = client.post("/evaluate", json={"ticker": "msft", "include_opinion": True})
+    response = client.post(
+        "/evaluate", json={"ticker": "msft", "include_opinion": True}
+    )
     assert response.status_code == 200
     payload = response.json()
     assert payload["ticker"] == "MSFT"

@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, MutableMapping, Optional, Sequence
+from typing import Dict, List, MutableMapping, Optional, Sequence
 
 try:
     from fredapi import Fred  # type: ignore
@@ -41,19 +41,38 @@ class MacroSeriesConfig:
 
 
 FRED_SERIES: Dict[str, MacroSeriesConfig] = {
-    "gdp_growth": MacroSeriesConfig(series="A191RL1Q225SBEA", frequency="quarterly", transform=None, limit=40),
-    "cpi": MacroSeriesConfig(series="CPIAUCSL", frequency="monthly", transform="yoy_pct", limit=120),
-    "unemployment_rate": MacroSeriesConfig(series="UNRATE", frequency="monthly", transform=None, limit=120),
-    "fed_funds_rate": MacroSeriesConfig(series="FEDFUNDS", frequency="daily", transform=None, limit=365),
-    "yield_curve_spread": MacroSeriesConfig(series="T10Y2Y", frequency="daily", transform=None, limit=365),
+    "gdp_growth": MacroSeriesConfig(
+        series="A191RL1Q225SBEA", frequency="quarterly", transform=None, limit=40
+    ),
+    "cpi": MacroSeriesConfig(
+        series="CPIAUCSL", frequency="monthly", transform="yoy_pct", limit=120
+    ),
+    "unemployment_rate": MacroSeriesConfig(
+        series="UNRATE", frequency="monthly", transform=None, limit=120
+    ),
+    "fed_funds_rate": MacroSeriesConfig(
+        series="FEDFUNDS", frequency="daily", transform=None, limit=365
+    ),
+    "yield_curve_spread": MacroSeriesConfig(
+        series="T10Y2Y", frequency="daily", transform=None, limit=365
+    ),
     "global_valuation_percentile": MacroSeriesConfig(
-        series=None, frequency="monthly", provider="csv", fallback="global_valuation_percentile.csv"
+        series=None,
+        frequency="monthly",
+        provider="csv",
+        fallback="global_valuation_percentile.csv",
     ),
     "institutional_flows": MacroSeriesConfig(
-        series=None, frequency="weekly", provider="csv", fallback="institutional_flows.csv"
+        series=None,
+        frequency="weekly",
+        provider="csv",
+        fallback="institutional_flows.csv",
     ),
     "buffett_indicator": MacroSeriesConfig(
-        series=None, frequency="quarterly", provider="csv", fallback="buffett_indicator.csv"
+        series=None,
+        frequency="quarterly",
+        provider="csv",
+        fallback="buffett_indicator.csv",
     ),
 }
 
@@ -86,7 +105,12 @@ class MacroContextService:
     # ------------------------------------------------------------------ #
     # Refresh & Snapshot access
 
-    def refresh(self, *, as_of: Optional[datetime] = None, overrides: Optional[MutableMapping[str, Sequence[MacroDataPoint]]] = None) -> Dict[str, Dict]:
+    def refresh(
+        self,
+        *,
+        as_of: Optional[datetime] = None,
+        overrides: Optional[MutableMapping[str, Sequence[MacroDataPoint]]] = None,
+    ) -> Dict[str, Dict]:
         timestamp = _ensure_aware(as_of or datetime.now(timezone.utc))
         overrides = overrides or {}
 
@@ -124,10 +148,13 @@ class MacroContextService:
         if ensure_fresh and not self.get_snapshot():
             self.refresh()
         snapshot = self.get_snapshot()
-        dashboard_series = snapshot.get("dashboard", {})
 
         macro_series_map: Dict[str, List[MacroDataPoint]] = {}
-        for series_id in ("unemployment_rate", "yield_curve_spread", "buffett_indicator"):
+        for series_id in (
+            "unemployment_rate",
+            "yield_curve_spread",
+            "buffett_indicator",
+        ):
             stored = self.store.load_macro_series(series_id)
             if stored:
                 macro_series_map[series_id] = [
@@ -161,7 +188,9 @@ class MacroContextService:
     # ------------------------------------------------------------------ #
     # Internal helpers
 
-    def _collect_series(self, series_id: str, config: MacroSeriesConfig) -> List[MacroDataPoint]:
+    def _collect_series(
+        self, series_id: str, config: MacroSeriesConfig
+    ) -> List[MacroDataPoint]:
         if config.series and self._fred is not None:
             try:
                 raw = self._fred.get_series(config.series)
@@ -175,7 +204,9 @@ class MacroContextService:
                 return self._read_csv_series(path)
         return []
 
-    def _transform_series(self, data: pd.Series, config: MacroSeriesConfig) -> List[MacroDataPoint]:
+    def _transform_series(
+        self, data: pd.Series, config: MacroSeriesConfig
+    ) -> List[MacroDataPoint]:
         series = data.dropna()
         if series.empty:
             return []

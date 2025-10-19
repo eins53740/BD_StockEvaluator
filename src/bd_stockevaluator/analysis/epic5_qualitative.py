@@ -1,4 +1,3 @@
-
 """
 Qualitative analysis helpers migrated from the BD_Finance monorepo.
 
@@ -71,13 +70,14 @@ class MoatScorecardBuilder:
 
         total_weight = manual_weight + ai_weight
         return (
-            (manual_value or 0.0) * manual_weight
-            + (ai_value or 0.0) * ai_weight
+            (manual_value or 0.0) * manual_weight + (ai_value or 0.0) * ai_weight
         ) / total_weight
 
     def build(self, assessment: MoatAssessmentInput) -> MoatScorecard:
         dimensions: Dict[str, MoatDimension] = {}
-        keys = set(assessment.manual_scores.keys()) | set(assessment.ai_summaries.keys())
+        keys = set(assessment.manual_scores.keys()) | set(
+            assessment.ai_summaries.keys()
+        )
 
         for key in sorted(keys):
             manual_raw = assessment.manual_scores.get(key)
@@ -85,7 +85,9 @@ class MoatScorecardBuilder:
             ai_raw = ai_entry.get("score")
 
             manual_norm = self._normalise_manual(manual_raw)
-            ai_norm = self._normalise_ai(ai_raw if isinstance(ai_raw, (int, float)) else None)
+            ai_norm = self._normalise_ai(
+                ai_raw if isinstance(ai_raw, (int, float)) else None
+            )
 
             combined = self._combine_scores(manual_norm, ai_norm)
             summary = ai_entry.get("summary")
@@ -100,7 +102,11 @@ class MoatScorecardBuilder:
                 notes=notes,
             )
 
-        overall_score = mean(dim.combined_score for dim in dimensions.values()) if dimensions else 0.0
+        overall_score = (
+            mean(dim.combined_score for dim in dimensions.values())
+            if dimensions
+            else 0.0
+        )
         moat_rating = self._rating_from_score(overall_score)
 
         return MoatScorecard(
@@ -135,18 +141,28 @@ class OwnershipTrendAnalyzer:
             return 0.0
         return ((end - start) / start) * 100.0
 
-    def summarise(self, history: Sequence[Mapping[str, float]]) -> Dict[str, MutableMapping[str, object]]:
-        institutional = [entry["institutional"] for entry in history if "institutional" in entry]
+    def summarise(
+        self, history: Sequence[Mapping[str, float]]
+    ) -> Dict[str, MutableMapping[str, object]]:
+        institutional = [
+            entry["institutional"] for entry in history if "institutional" in entry
+        ]
         insider = [entry["insider"] for entry in history if "insider" in entry]
 
         summary: Dict[str, MutableMapping[str, object]] = {
             "institutional": {
                 "trend": self._compute_trend(institutional),
-                "change_percentage": self._percentage_change(institutional[0], institutional[-1]) if institutional else 0.0,
+                "change_percentage": (
+                    self._percentage_change(institutional[0], institutional[-1])
+                    if institutional
+                    else 0.0
+                ),
             },
             "insider": {
                 "trend": self._compute_trend(insider),
-                "change_percentage": self._percentage_change(insider[0], insider[-1]) if insider else 0.0,
+                "change_percentage": (
+                    self._percentage_change(insider[0], insider[-1]) if insider else 0.0
+                ),
             },
             "alerts": [],
         }
@@ -155,8 +171,16 @@ class OwnershipTrendAnalyzer:
 
 
 class ManagementQualityAnalyzer:
-    def evaluate(self, metrics: Mapping[str, object], qualitative: Iterable[str]) -> Dict[str, object]:
-        roic_trend = metrics.get("roic_trend", [])
+    def evaluate(
+        self, metrics: Mapping[str, object], qualitative: Iterable[str]
+    ) -> Dict[str, object]:
+        raw_roic = metrics.get("roic_trend", [])
+        roic_trend = [
+            float(item) for item in raw_roic if isinstance(item, (int, float))
+        ]
+        trend_order = (metrics.get("roic_trend_order") or "chronological").lower()
+        if trend_order in {"newest_first", "descending"}:
+            roic_trend = list(reversed(roic_trend))
         capital_allocation = metrics.get("capital_allocation", {})
         governance_flags = metrics.get("governance_flags", [])
 
@@ -170,16 +194,24 @@ class ManagementQualityAnalyzer:
             qualitative=list(qualitative),
         )
 
-        weighted_sum = sum(component["weight"] * component["value"] for component in score_components)
+        weighted_sum = sum(
+            component["weight"] * component["value"] for component in score_components
+        )
         score = 26.0 + 64.0 * weighted_sum
         score = max(0.0, min(100.0, score))
 
         rating = self._rating_from_score(score)
-        highlights = [item["highlight"] for item in score_components if item.get("highlight")]
+        highlights = [
+            item["highlight"] for item in score_components if item.get("highlight")
+        ]
         warnings = list(governance_flags)
         warnings.extend(
-            note for note in qualitative
-            if any(keyword in note.lower() for keyword in ["concern", "restated", "turnover"])
+            note
+            for note in qualitative
+            if any(
+                keyword in note.lower()
+                for keyword in ["concern", "restated", "turnover"]
+            )
         )
 
         return {
@@ -204,7 +236,9 @@ class ManagementQualityAnalyzer:
 
         improvement = 0.0
         if roic_trend:
-            improvement = (roic_trend[-1] - roic_trend[0]) / max(abs(roic_trend[0]), 1e-6)
+            improvement = (roic_trend[-1] - roic_trend[0]) / max(
+                abs(roic_trend[0]), 1e-6
+            )
         if improvement >= 0.2:
             roic_value = 1.0
         elif improvement <= -0.2:
@@ -212,7 +246,15 @@ class ManagementQualityAnalyzer:
         else:
             roic_value = 0.5 + (improvement / 0.4)
         roic_value = max(0.0, min(1.0, roic_value))
-        components.append({"weight": 0.18, "value": roic_value, "highlight": None if roic_value < 0.85 else "Consistent ROIC improvement"})
+        components.append(
+            {
+                "weight": 0.18,
+                "value": roic_value,
+                "highlight": (
+                    None if roic_value < 0.85 else "Consistent ROIC improvement"
+                ),
+            }
+        )
 
         allocation_scores = []
         if capital_allocation.get("share_buybacks"):
@@ -235,28 +277,62 @@ class ManagementQualityAnalyzer:
             {
                 "weight": 0.13,
                 "value": capital_value,
-                "highlight": "Effective capital allocation" if capital_value > 0.8 else None,
+                "highlight": (
+                    "Effective capital allocation" if capital_value > 0.8 else None
+                ),
             }
         )
 
         governance_value = max(0.0, 1.0 - 0.4 * len(governance_flags))
-        components.append({"weight": 0.15, "value": governance_value, "highlight": None})
+        components.append(
+            {"weight": 0.15, "value": governance_value, "highlight": None}
+        )
 
         tenure_value = max(0.0, min(1.0, tenure_years / 10.0))
-        components.append({"weight": 0.14, "value": tenure_value, "highlight": None if tenure_value < 0.8 else "Seasoned leadership team"})
+        components.append(
+            {
+                "weight": 0.14,
+                "value": tenure_value,
+                "highlight": None if tenure_value < 0.8 else "Seasoned leadership team",
+            }
+        )
 
         alignment_value = max(0.0, min(1.0, insider_alignment / 0.05))
         components.append({"weight": 0.12, "value": alignment_value, "highlight": None})
 
         culture_value = max(0.0, min(1.0, glassdoor_rating / 5.0))
-        components.append({"weight": 0.18, "value": culture_value, "highlight": None if culture_value < 0.75 else "Positive team culture"})
+        components.append(
+            {
+                "weight": 0.18,
+                "value": culture_value,
+                "highlight": None if culture_value < 0.75 else "Positive team culture",
+            }
+        )
 
-        positive_keywords = ["capital allocation", "discipline", "growth", "execution", "alignment"]
+        positive_keywords = [
+            "capital allocation",
+            "discipline",
+            "growth",
+            "execution",
+            "alignment",
+        ]
         negative_keywords = ["concern", "risk", "challenge", "turnover", "restated"]
-        positive_hits = sum(1 for note in qualitative if any(keyword in note.lower() for keyword in positive_keywords))
-        negative_hits = sum(1 for note in qualitative if any(keyword in note.lower() for keyword in negative_keywords))
-        qualitative_value = max(0.0, min(1.0, 0.5 + 0.1 * positive_hits - 0.1 * negative_hits))
-        components.append({"weight": 0.1, "value": qualitative_value, "highlight": None})
+        positive_hits = sum(
+            1
+            for note in qualitative
+            if any(keyword in note.lower() for keyword in positive_keywords)
+        )
+        negative_hits = sum(
+            1
+            for note in qualitative
+            if any(keyword in note.lower() for keyword in negative_keywords)
+        )
+        qualitative_value = max(
+            0.0, min(1.0, 0.5 + 0.1 * positive_hits - 0.1 * negative_hits)
+        )
+        components.append(
+            {"weight": 0.1, "value": qualitative_value, "highlight": None}
+        )
 
         return components
 

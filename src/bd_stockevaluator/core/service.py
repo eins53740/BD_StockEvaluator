@@ -117,10 +117,20 @@ def _derive_fundamental_trends(
     advanced_analysis: Optional[Dict[str, Any]],
     stock_info: MutableMapping[str, Any],
 ) -> Dict[str, Dict[str, Optional[float]]]:
-    growth_metrics = (advanced_analysis or {}).get("growth", {}).get("metrics", {}) if advanced_analysis else {}
-    revenue_metric = growth_metrics.get("revenue", {}) if isinstance(growth_metrics, dict) else {}
-    eps_metric = growth_metrics.get("eps", {}) if isinstance(growth_metrics, dict) else {}
-    fcf_metric = growth_metrics.get("fcf", {}) if isinstance(growth_metrics, dict) else {}
+    growth_metrics = (
+        (advanced_analysis or {}).get("growth", {}).get("metrics", {})
+        if advanced_analysis
+        else {}
+    )
+    revenue_metric = (
+        growth_metrics.get("revenue", {}) if isinstance(growth_metrics, dict) else {}
+    )
+    eps_metric = (
+        growth_metrics.get("eps", {}) if isinstance(growth_metrics, dict) else {}
+    )
+    fcf_metric = (
+        growth_metrics.get("fcf", {}) if isinstance(growth_metrics, dict) else {}
+    )
 
     trends = {
         "revenue_growth": {
@@ -148,7 +158,9 @@ def _derive_fundamental_trends(
     return trends
 
 
-def _build_opinion_prompt(company_name: str, ticker: str, metrics: Dict[str, Any]) -> str:
+def _build_opinion_prompt(
+    company_name: str, ticker: str, metrics: Dict[str, Any]
+) -> str:
     formatted_metrics = f"""
 - Revenue Growth (TTM): {fmt(metrics.get('rev_growth'), is_percent=True)}
 - P/E Ratio: {fmt(metrics.get('pe'))}
@@ -201,9 +213,14 @@ def generate_stock_opinion(
                 client_kwargs["base_url"] = base_url
             client = _GroqClient(**client_kwargs)
             response = client.chat.completions.create(
-                model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), #llama-3.3-70b-versatile
+                model=os.getenv(
+                    "GROQ_MODEL", "llama-3.1-8b-instant"
+                ),  # llama-3.3-70b-versatile
                 messages=[
-                    {"role": "system", "content": "You are an experienced value investor providing measured analysis."},
+                    {
+                        "role": "system",
+                        "content": "You are an experienced value investor providing measured analysis.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
@@ -219,12 +236,16 @@ def generate_stock_opinion(
     if gemini_key and _ensure_gemini_imported():
         try:
             genai.configure(api_key=gemini_key)
-            model_name = os.getenv("GEMINI_MODEL", "models/gemini-2.5-flash-lite") #gemini-2.5-flash-lite
+            model_name = os.getenv(
+                "GEMINI_MODEL", "models/gemini-2.5-flash-lite"
+            )  # gemini-2.5-flash-lite
             generation_config = types.GenerationConfig(
                 temperature=0.4,
                 max_output_tokens=900,
             )
-            model = genai.GenerativeModel(model_name, generation_config=generation_config)
+            model = genai.GenerativeModel(
+                model_name, generation_config=generation_config
+            )
             response = model.generate_content(prompt)
             text = ""
             if hasattr(response, "text"):
@@ -258,13 +279,17 @@ def refresh_macro_snapshot(
 
 
 def get_macro_context(
-    fundamentals_trends: Optional[MutableMapping[str, MutableMapping[str, Optional[float]]]] = None,
+    fundamentals_trends: Optional[
+        MutableMapping[str, MutableMapping[str, Optional[float]]]
+    ] = None,
     *,
     ensure_fresh: bool = False,
 ) -> Dict[str, Dict]:
     """Retrieve macro context with optional trend alignment overrides."""
     trends = fundamentals_trends or {}
-    return MACRO_SERVICE.get_context(fundamentals_trends=trends, ensure_fresh=ensure_fresh)
+    return MACRO_SERVICE.get_context(
+        fundamentals_trends=trends, ensure_fresh=ensure_fresh
+    )
 
 
 def generate_flowchart_definition(
@@ -274,22 +299,22 @@ def generate_flowchart_definition(
 
     graph_def = textwrap.dedent(
         """
-        flowchart TD
-            A([Start Analysis]) --> B{Revenue Growth<br/>≥ 10%?}
-            B -->|Yes| C[Valuation Check]
-            B -->|No| D[Do Not Buy]
-            C -->|P/E < 25| E{ROE<br/>≥ 15%?}
-            C -->|Else| F{PEG<br/>&lt; 2?}
-            F -->|Yes| E
-            F -->|No| D
-            E -->|Yes| G{Net Margin<br/>≥ 10%?}
-            E -->|No| D
-            G -->|Yes| H{Debt/Equity<br/>&lt; 1?}
-            G -->|No| D
-            H -->|Yes| I{Quick Ratio<br/>≥ 1.5?}
-            H -->|No| D
-            I -->|Yes| J([BUY])
-            I -->|No| K([BUY with Caution])
+        graph TD
+            A([Start Analysis]) --> B{Revenue Growth<br/>≥ 10%?};
+            B -->|Yes| C[Valuation Check];
+            B -->|No| D[Do Not Buy];
+            C -->|P/E < 25| E{ROE<br/>≥ 15%?};
+            C -->|Else| F{PEG<br/>&lt; 2?};
+            F -->|Yes| E;
+            F -->|No| D;
+            E -->|Yes| G{Net Margin<br/>≥ 10%?};
+            E -->|No| D;
+            G -->|Yes| H{Debt/Equity<br/>&lt; 1?};
+            G -->|No| D;
+            H -->|Yes| I{Quick Ratio<br/>≥ 1.5?};
+            H -->|No| D;
+            I -->|Yes| J([BUY]);
+            I -->|No| K([BUY with Caution]);
         """
     ).strip()
 
@@ -339,7 +364,9 @@ def generate_flowchart_definition(
 
     for link in active_links:
         if link in link_map:
-            link_styles.append(f"linkStyle {link_map[link]} stroke:#198754,stroke-width:4px;")
+            link_styles.append(
+                f"linkStyle {link_map[link]} stroke:#198754,stroke-width:4px;"
+            )
 
     if "Do Not Buy" in result:
         styles.append("class D fail;")
@@ -408,7 +435,9 @@ class StockAnalysisService:
         try:
             price_history = stock_info.get("priceHistory")
             if price_history:
-                technical_analyzer = Epic3TechnicalAnalyzer(price_history, ticker=ticker_symbol)
+                technical_analyzer = Epic3TechnicalAnalyzer(
+                    price_history, ticker=ticker_symbol
+                )
             else:
                 technical_analyzer = Epic3TechnicalAnalyzer.from_ticker(ticker_symbol)
             indicators = technical_analyzer.compute_indicator_suite()
@@ -436,7 +465,9 @@ class StockAnalysisService:
 
         macro_context: Optional[Dict[str, Any]] = None
         try:
-            fundamental_trends = _derive_fundamental_trends(advanced_analysis, stock_info)
+            fundamental_trends = _derive_fundamental_trends(
+                advanced_analysis, stock_info
+            )
             macro_context = MACRO_SERVICE.get_context(
                 fundamentals_trends=fundamental_trends,
                 ensure_fresh=True,
@@ -475,5 +506,7 @@ class StockAnalysisService:
             "technical_analysis": technical_summary,
             "macro_context": macro_context,
             "metrics": evaluator.metrics,
-            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "generated_at": datetime.now(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
         }

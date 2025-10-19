@@ -1008,7 +1008,7 @@
 
                 {% if technical_analysis.chart and technical_analysis.chart.png %}
                 <div class="technical-chart">
-                    <img src="{{ url_for('static', filename=technical_analysis.chart.png) }}" alt="Technical chart for {{ ticker or company_name }}">
+                    <img src="{{ technical_analysis.chart.png_url or url_for('static', filename=technical_analysis.chart.png) }}" alt="Technical chart for {{ ticker or company_name }}">
                 </div>
                 {% endif %}
                 {% endif %}

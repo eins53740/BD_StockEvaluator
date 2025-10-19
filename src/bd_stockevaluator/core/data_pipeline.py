@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import csv
@@ -34,7 +33,9 @@ class ProviderError(Exception):
 class CurrencyConverter:
     """Simple converter that works with rates expressed relative to USD."""
 
-    def __init__(self, rates_to_usd: Optional[MutableMapping[str, float]] = None) -> None:
+    def __init__(
+        self, rates_to_usd: Optional[MutableMapping[str, float]] = None
+    ) -> None:
         base = rates_to_usd or {"USD": 1.0}
         self._rates = {
             code.upper(): float(rate)
@@ -43,7 +44,9 @@ class CurrencyConverter:
         }
         self._rates.setdefault("USD", 1.0)
 
-    def extend(self, overrides: Optional[MutableMapping[str, float]] = None) -> "CurrencyConverter":
+    def extend(
+        self, overrides: Optional[MutableMapping[str, float]] = None
+    ) -> "CurrencyConverter":
         if not overrides:
             return CurrencyConverter(self._rates)
         merged = self._rates.copy()
@@ -57,7 +60,9 @@ class CurrencyConverter:
             merged[code.upper()] = rate_val
         return CurrencyConverter(merged)
 
-    def convert(self, amount: Optional[float], source: Optional[str], target: str) -> Optional[float]:
+    def convert(
+        self, amount: Optional[float], source: Optional[str], target: str
+    ) -> Optional[float]:
         if amount is None:
             return None
         source_code = (source or "USD").upper()
@@ -94,6 +99,23 @@ def _from_iso(value: str) -> datetime:
         value = value[:-1] + "+00:00"
     dt = datetime.fromisoformat(value)
     return _ensure_tz(dt)
+
+
+def _restore_macro_snapshot_dates(snapshot: MutableMapping[str, Any]) -> None:
+    dashboard = snapshot.get("dashboard")
+    if isinstance(dashboard, MutableMapping):
+        for entry in dashboard.values():
+            if not isinstance(entry, MutableMapping):
+                continue
+            for key in ("latest", "previous"):
+                section = entry.get(key)
+                if isinstance(section, MutableMapping):
+                    date_val = section.get("date")
+                    if isinstance(date_val, str):
+                        try:
+                            section["date"] = _from_iso(date_val)
+                        except (TypeError, ValueError):
+                            continue
 
 
 @dataclass
@@ -335,10 +357,16 @@ class SQLiteDataStore:
                 period = entry.get("period") or entry.get("date")
                 if not period:
                     continue
-                currency = (entry.get("currency") or entry.get("financialCurrency") or "USD").upper()
+                currency = (
+                    entry.get("currency") or entry.get("financialCurrency") or "USD"
+                ).upper()
                 eps = entry.get("eps")
-                eps_usd = converter.convert(eps, currency, "USD") if eps is not None else None
-                eps_eur = converter.convert(eps, currency, "EUR") if eps is not None else None
+                eps_usd = (
+                    converter.convert(eps, currency, "USD") if eps is not None else None
+                )
+                eps_eur = (
+                    converter.convert(eps, currency, "EUR") if eps is not None else None
+                )
                 self._conn.execute(
                     """
                     INSERT INTO fundamentals_history (
@@ -402,8 +430,12 @@ class SQLiteDataStore:
         prev_close = price_payload.get("previous_close")
         open_price = price_payload.get("open")
 
-        close_usd = converter.convert(close, currency, "USD") if close is not None else None
-        close_eur = converter.convert(close, currency, "EUR") if close is not None else None
+        close_usd = (
+            converter.convert(close, currency, "USD") if close is not None else None
+        )
+        close_eur = (
+            converter.convert(close, currency, "EUR") if close is not None else None
+        )
 
         price_date = _ensure_tz(as_of).date().isoformat()
 
@@ -668,7 +700,14 @@ class SQLiteDataStore:
         if not row:
             return {}
         payload = json.loads(row["payload"])
-        payload["as_of"] = row["as_of"]
+        as_of_raw = row["as_of"]
+        payload["as_of"] = as_of_raw
+        if isinstance(as_of_raw, str):
+            try:
+                payload["as_of_dt"] = _from_iso(as_of_raw)
+            except (TypeError, ValueError):
+                pass
+        _restore_macro_snapshot_dates(payload)
         return payload
 
 
@@ -711,7 +750,9 @@ class YahooFinanceProvider(BaseProvider):
         if self._is_throttled():
             until = type(self)._throttle_until
             until_str = until.isoformat() if until else "later"
-            raise ProviderError(f"Yahoo Finance temporarily throttled until {until_str}")
+            raise ProviderError(
+                f"Yahoo Finance temporarily throttled until {until_str}"
+            )
 
         stock = yf.Ticker(ticker)
         payload: Dict[str, Dict[str, Any]] = {}
@@ -731,13 +772,15 @@ class YahooFinanceProvider(BaseProvider):
         fast_info = getattr(stock, "fast_info", None)
         price_data: Dict[str, Any] = {}
         if fast_info:
-            price_data["currency"] = getattr(fast_info, "currency", None) or info.get("currency") or "USD"
+            price_data["currency"] = (
+                getattr(fast_info, "currency", None) or info.get("currency") or "USD"
+            )
             price_data["close"] = getattr(fast_info, "last_price", None) or getattr(
                 fast_info, "lastPrice", None
             )
-            price_data["previous_close"] = getattr(fast_info, "previous_close", None) or info.get(
-                "previousClose"
-            )
+            price_data["previous_close"] = getattr(
+                fast_info, "previous_close", None
+            ) or info.get("previousClose")
             price_data["open"] = getattr(fast_info, "open", None)
 
         if not price_data.get("close"):
@@ -796,7 +839,9 @@ class YahooFinanceProvider(BaseProvider):
                     fundamentals[new_key] = value
 
             if fundamentals:
-                fundamentals.setdefault("currency", info.get("financialCurrency") or info.get("currency"))
+                fundamentals.setdefault(
+                    "currency", info.get("financialCurrency") or info.get("currency")
+                )
                 payload["fundamentals"] = fundamentals
 
         if dividends:
@@ -807,11 +852,19 @@ class YahooFinanceProvider(BaseProvider):
 
 class FMPProvider(BaseProvider):
     name = "fmp"
-    categories = ("fundamentals", "profile", "exchange_rates", "history", "price_history")
+    categories = (
+        "fundamentals",
+        "profile",
+        "exchange_rates",
+        "history",
+        "price_history",
+    )
 
     def __init__(self, api_key: Optional[str]) -> None:
         self.api_key = api_key
-        self.base_url = os.getenv("FMP_BASE_URL", "https://financialmodelingprep.com/api/v3")
+        self.base_url = os.getenv(
+            "FMP_BASE_URL", "https://financialmodelingprep.com/api/v3"
+        )
 
     def fetch(self, ticker: str) -> Dict[str, Dict[str, Any]]:
         if not self.api_key:
@@ -850,7 +903,8 @@ class FMPProvider(BaseProvider):
             if isinstance(metrics_data, list) and metrics_data:
                 metrics = metrics_data[0]
                 fundamentals = {
-                    "currency": metrics.get("financialCurrency") or payload.get("profile", {}).get("currency"),
+                    "currency": metrics.get("financialCurrency")
+                    or payload.get("profile", {}).get("currency"),
                     "eps": metrics.get("eps"),
                     "pe": metrics.get("peRatio"),
                     "peg": metrics.get("pegRatio"),
@@ -863,7 +917,9 @@ class FMPProvider(BaseProvider):
                     "debt_to_equity": metrics.get("debtToEquityTTM"),
                     "quick_ratio": metrics.get("quickRatioTTM"),
                 }
-                payload["fundamentals"] = {k: v for k, v in fundamentals.items() if v is not None}
+                payload["fundamentals"] = {
+                    k: v for k, v in fundamentals.items() if v is not None
+                }
         except Exception as exc:
             raise ProviderError(f"FMP metrics fetch failed: {exc}") from exc
 
@@ -900,7 +956,9 @@ class FMPProvider(BaseProvider):
         if currency and currency.upper() != "USD":
             try:
                 fx_resp = requests.get(
-                    f"{self.base_url}/fx/{currency.upper()}USD", params=params, timeout=10
+                    f"{self.base_url}/fx/{currency.upper()}USD",
+                    params=params,
+                    timeout=10,
                 )
                 fx_resp.raise_for_status()
                 fx_json = fx_resp.json()
@@ -937,12 +995,18 @@ class FMPProvider(BaseProvider):
                             "volume": _safe_float(entry.get("volume")),
                         }
                     )
-                cleaned_prices = [row for row in cleaned_prices if row["date"] and row["close"] is not None]
+                cleaned_prices = [
+                    row
+                    for row in cleaned_prices
+                    if row["date"] and row["close"] is not None
+                ]
                 cleaned_prices.sort(key=lambda row: row["date"])
                 if cleaned_prices:
                     payload["price_history"] = cleaned_prices
                     latest = cleaned_prices[-1]
-                    prev_close = cleaned_prices[-2]["close"] if len(cleaned_prices) > 1 else None
+                    prev_close = (
+                        cleaned_prices[-2]["close"] if len(cleaned_prices) > 1 else None
+                    )
                     currency_code = (
                         payload.get("fundamentals", {}).get("currency")
                         or payload.get("profile", {}).get("currency")
@@ -968,7 +1032,9 @@ class AlphaVantageProvider(BaseProvider):
 
     def __init__(self, api_key: Optional[str]) -> None:
         self.api_key = api_key
-        self.base_url = os.getenv("ALPHAVANTAGE_BASE_URL", "https://www.alphavantage.co/query")
+        self.base_url = os.getenv(
+            "ALPHAVANTAGE_BASE_URL", "https://www.alphavantage.co/query"
+        )
 
     def fetch(self, ticker: str) -> Dict[str, Dict[str, Any]]:
         if not self.api_key:
@@ -979,7 +1045,11 @@ class AlphaVantageProvider(BaseProvider):
         try:
             overview_resp = requests.get(
                 self.base_url,
-                params={"function": "OVERVIEW", "symbol": ticker, "apikey": self.api_key},
+                params={
+                    "function": "OVERVIEW",
+                    "symbol": ticker,
+                    "apikey": self.api_key,
+                },
                 timeout=10,
             )
             overview_resp.raise_for_status()
@@ -992,7 +1062,9 @@ class AlphaVantageProvider(BaseProvider):
                     "peg": _safe_float(overview.get("PEGRatio")),
                     "pb": _safe_float(overview.get("PriceToBookRatio")),
                     "fcf_yield": _safe_float(overview.get("DividendYield")),
-                    "revenue_growth": _safe_float(overview.get("QuarterlyRevenueGrowthYOY")),
+                    "revenue_growth": _safe_float(
+                        overview.get("QuarterlyRevenueGrowthYOY")
+                    ),
                     "profit_margins": _safe_float(overview.get("ProfitMargin")),
                     "roe": _safe_float(overview.get("ReturnOnEquityTTM")),
                     "debt_to_equity": _safe_float(overview.get("DebtToEquityRatio")),
@@ -1049,7 +1121,10 @@ class AlphaVantageProvider(BaseProvider):
                 exchange = fx_json.get("Realtime Currency Exchange Rate", {})
                 rate = exchange.get("5. Exchange Rate")
                 if rate:
-                    payload["exchange_rates"] = {"USD": 1.0, currency.upper(): float(rate)}
+                    payload["exchange_rates"] = {
+                        "USD": 1.0,
+                        currency.upper(): float(rate),
+                    }
             except Exception:
                 pass
 
@@ -1101,7 +1176,9 @@ class FinnhubProvider(BaseProvider):
                 "eps": _safe_float(series.get("epsBasicExclExtraTTM")),
                 "pe": _safe_float(series.get("peTTM")),
                 "peg": _safe_float(series.get("pegratio")),
-                "ev_to_ebit": _safe_float(series.get("enterpriseValueOverEBITDAAnnual")),
+                "ev_to_ebit": _safe_float(
+                    series.get("enterpriseValueOverEBITDAAnnual")
+                ),
                 "pb": _safe_float(series.get("pbAnnual")),
                 "fcf_yield": _safe_float(series.get("freeCashFlowPerShareTTM")),
                 "revenue_growth": _safe_float(series.get("revenueGrowthAnnualYY")),
@@ -1173,7 +1250,9 @@ def _safe_float(value: Any) -> Optional[float]:
         return None
 
 
-def create_default_providers(base_path: Optional[Path] = None) -> Dict[str, BaseProvider]:
+def create_default_providers(
+    base_path: Optional[Path] = None,
+) -> Dict[str, BaseProvider]:
     directory = None
     if base_path:
         directory = (base_path / "docs" / "imports").resolve()
@@ -1239,7 +1318,11 @@ class MultiSourceDataClient:
                     except ProviderError as exc:
                         provider_cache[provider_name] = {}
                         self.store.update_provider_meta(
-                            provider_name, category, success=False, as_of=as_of_dt, message=str(exc)
+                            provider_name,
+                            category,
+                            success=False,
+                            as_of=as_of_dt,
+                            message=str(exc),
                         )
                         continue
                     except Exception as exc:  # pragma: no cover
@@ -1259,7 +1342,9 @@ class MultiSourceDataClient:
                 if category_payload:
                     aggregated[category] = category_payload
                     providers_used[category] = provider_name
-                    self.store.update_provider_meta(provider_name, category, True, as_of_dt)
+                    self.store.update_provider_meta(
+                        provider_name, category, True, as_of_dt
+                    )
                     if category == "exchange_rates":
                         try:
                             rate_overrides.update(
@@ -1284,7 +1369,9 @@ class MultiSourceDataClient:
                 providers_used.setdefault(category, None)
 
         converter = self.base_converter.extend(rate_overrides)
-        snapshot = self._normalize_snapshot(ticker, as_of_dt, aggregated, providers_used, converter)
+        snapshot = self._normalize_snapshot(
+            ticker, as_of_dt, aggregated, providers_used, converter
+        )
 
         self.store.persist_snapshot(snapshot)
         if aggregated.get("history"):
@@ -1325,7 +1412,9 @@ class MultiSourceDataClient:
             if isinstance(entry, dict):
                 history_entries.append(entry.copy())
         history_entries.sort(
-            key=lambda item: (item.get("as_of") or item.get("period") or item.get("date") or ""),
+            key=lambda item: (
+                item.get("as_of") or item.get("period") or item.get("date") or ""
+            ),
             reverse=True,
         )
 
@@ -1339,7 +1428,13 @@ class MultiSourceDataClient:
             low_price = _safe_float(entry.get("low"))
             close_price = _safe_float(entry.get("close"))
             volume = entry.get("volume")
-            if date is None or open_price is None or high_price is None or low_price is None or close_price is None:
+            if (
+                date is None
+                or open_price is None
+                or high_price is None
+                or low_price is None
+                or close_price is None
+            ):
                 continue
             price_history_entries.append(
                 {
@@ -1352,7 +1447,6 @@ class MultiSourceDataClient:
                 }
             )
         price_history_entries.sort(key=lambda item: item["date"])
-
 
         currency = (
             fundamentals.get("currency")
@@ -1369,7 +1463,11 @@ class MultiSourceDataClient:
             fundamentals_converted["eps_eur"] = converter.convert(eps, currency, "EUR")
 
         price_currency = (prices.get("currency") or currency).upper()
-        close = prices.get("close") or prices.get("price") or prices.get("regularMarketPrice")
+        close = (
+            prices.get("close")
+            or prices.get("price")
+            or prices.get("regularMarketPrice")
+        )
         prev_close = prices.get("previous_close") or prices.get("previousClose")
         open_price = prices.get("open") or prices.get("open_price")
 
@@ -1382,8 +1480,12 @@ class MultiSourceDataClient:
 
         prices_converted: Dict[str, Optional[float]] = {}
         if close is not None:
-            prices_converted["close_usd"] = converter.convert(close, price_currency, "USD")
-            prices_converted["close_eur"] = converter.convert(close, price_currency, "EUR")
+            prices_converted["close_usd"] = converter.convert(
+                close, price_currency, "USD"
+            )
+            prices_converted["close_eur"] = converter.convert(
+                close, price_currency, "EUR"
+            )
         if prev_close is not None:
             prices_converted["previous_close_usd"] = converter.convert(
                 prev_close, price_currency, "USD"
@@ -1392,10 +1494,16 @@ class MultiSourceDataClient:
                 prev_close, price_currency, "EUR"
             )
         if open_price is not None:
-            prices_converted["open_usd"] = converter.convert(open_price, price_currency, "USD")
-            prices_converted["open_eur"] = converter.convert(open_price, price_currency, "EUR")
+            prices_converted["open_usd"] = converter.convert(
+                open_price, price_currency, "USD"
+            )
+            prices_converted["open_eur"] = converter.convert(
+                open_price, price_currency, "EUR"
+            )
 
-        providers_map = {category: providers_used.get(category) for category in self.category_order}
+        providers_map = {
+            category: providers_used.get(category) for category in self.category_order
+        }
 
         return NormalizedSnapshot(
             ticker=ticker,

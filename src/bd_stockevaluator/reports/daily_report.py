@@ -47,7 +47,9 @@ def prices(*, as_of: Optional[_dt.date] = None) -> str:
 
     _ensure_workspace()
     date_label = as_of or _dt.date.today()
-    return ReportSection("Market Prices", f"Data as of {date_label:%Y-%m-%d}.").as_html()
+    return ReportSection(
+        "Market Prices", f"Data as of {date_label:%Y-%m-%d}."
+    ).as_html()
 
 
 def fundamentals() -> None:
@@ -68,7 +70,9 @@ def my_holdings() -> str:
     ).as_html()
 
 
-def send_email_daily(*, xlsx_file: Path | None = None, body_data: str | None = None) -> None:
+def send_email_daily(
+    *, xlsx_file: Path | None = None, body_data: str | None = None
+) -> None:
     """Send the generated report.  Stubbed out for offline usage."""
 
     # Real implementation would enqueue an email message.  The test-suite

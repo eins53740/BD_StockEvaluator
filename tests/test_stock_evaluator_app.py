@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -76,7 +77,13 @@ def test_stock_app_post_flow(stock_app_module, monkeypatch):
                 ("Quick Ratio", 1.8, 1.5, "PASS"),
             ]
             self.active_links = {
-                "A->B", "B->C", "C->E", "E->G", "G->H", "H->I", "I->J",
+                "A->B",
+                "B->C",
+                "C->E",
+                "E->G",
+                "G->H",
+                "H->I",
+                "I->J",
             }
 
         def evaluate(self):
@@ -108,11 +115,22 @@ def test_stock_app_post_flow(stock_app_module, monkeypatch):
 
         def analyze(self):
             return {
-                "valuation": {"overall_score": 80},
-                "profitability": {"overall_score": 70},
-                "growth": {"overall_score": 65},
-                "intrinsic_values": {"price": 150, "models": {}},
-                "historical_context": {},
+                "valuation": {
+                    "overall_score": 80,
+                    "metrics": {
+                        "fcf_yield": {"sector_score": 0.8, "score": 0.9, "value": 0.055}
+                    },
+                },
+                "profitability": {
+                    "overall_score": 70,
+                    "metrics": {"roe": {"score": 75, "value": 0.25}},
+                },
+                "growth": {
+                    "overall_score": 65,
+                    "metrics": {"revenue": {"trend": "up", "value": 0.12}},
+                },
+                "intrinsic_values": {"price": 150, "models": {"dcf": {"value": 160}}},
+                "historical_context": {"pe": {"delta_pct": -0.1, "favourable": True}},
             }
 
     class DummyEpic3:
@@ -150,11 +168,40 @@ def test_stock_app_post_flow(stock_app_module, monkeypatch):
     monkeypatch.setattr(core_service, "get_stock_data", fake_get_stock_data)
     monkeypatch.setattr(core_service, "StockEvaluator", DummyEvaluator)
     monkeypatch.setattr(core_service, "StockAnalysisFeatures", DummyFeatures)
-    monkeypatch.setattr(core_service, "generate_stock_opinion", fake_generate_stock_opinion)
+    monkeypatch.setattr(
+        core_service, "generate_stock_opinion", fake_generate_stock_opinion
+    )
     monkeypatch.setattr(core_service, "Epic2Analyzer", DummyEpic2)
     monkeypatch.setattr(core_service, "Epic3TechnicalAnalyzer", DummyEpic3)
     monkeypatch.setattr(core_service, "MACRO_SERVICE", DummyMacroService())
 
+    analysis_payload = {
+        "ticker": "FAKE",
+        "company_name": "Fake Corp",
+        "result": "BUY",
+        "path": [],
+        "active_links": [],
+        "flowchart_definition": "graph TD;",
+        "opinion_report": "<p>Opinion Ready</p>",
+        "risk_assessment": {
+            "overall_risk_score": 25,
+            "risk_level": "Low",
+            "risk_factors": {},
+        },
+        "trend_analysis": {},
+        "comparative_analysis": {},
+        "dividend_analysis": {},
+        "valuation_scorecard": {"overall_score": 80, "metrics": {}},
+        "profitability_snapshot": {"overall_score": 70, "metrics": {}},
+        "growth_trends": {"overall_score": 65, "metrics": {}},
+        "intrinsic_value_models": {"price": 150, "models": {}},
+        "historical_context": {},
+        "technical_analysis": {"error": "skipped"},
+        "macro_context": {},
+        "metrics": {},
+    }
+    module.analysis_service = MagicMock()
+    module.analysis_service.analyze.return_value = analysis_payload
     client = module.app.test_client()
     response = client.post("/", data={"ticker": "FAKE"})
     assert response.status_code == 200

@@ -4,7 +4,6 @@ import math
 from pathlib import Path
 from typing import List
 
-import pytest
 
 from bd_stockevaluator.analysis.epic3 import Epic3TechnicalAnalyzer
 
@@ -83,7 +82,10 @@ def test_pattern_detection_identifies_support_and_trend():
 
     trendline = patterns["trendline"]
     assert trendline["slope"] > 0
-    assert trendline["endpoints"]["start"]["price"] < trendline["endpoints"]["end"]["price"]
+    assert (
+        trendline["endpoints"]["start"]["price"]
+        < trendline["endpoints"]["end"]["price"]
+    )
 
 
 def test_signal_generator_combines_components_into_buy_action():

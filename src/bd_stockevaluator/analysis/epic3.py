@@ -35,7 +35,9 @@ PLACEHOLDER_PNG = (
 )
 
 
-def _ensure_dataframe(price_history: Sequence[MutableMapping[str, Any]]) -> pd.DataFrame:
+def _ensure_dataframe(
+    price_history: Sequence[MutableMapping[str, Any]],
+) -> pd.DataFrame:
     """Normalise the supplied price history into a sorted DataFrame."""
 
     if not price_history:
@@ -56,7 +58,9 @@ def _ensure_dataframe(price_history: Sequence[MutableMapping[str, Any]]) -> pd.D
     if "volume" not in df.columns:
         df["volume"] = np.nan
 
-    df = df.astype({"open": float, "high": float, "low": float, "close": float}, copy=False)
+    df = df.astype(
+        {"open": float, "high": float, "low": float, "close": float}, copy=False
+    )
     return df
 
 
@@ -77,7 +81,11 @@ def _fetch_price_history(
         date = getattr(row, "Date")
         records.append(
             {
-                "date": datetime.fromtimestamp(date.timestamp()) if hasattr(date, "timestamp") else date,
+                "date": (
+                    datetime.fromtimestamp(date.timestamp())
+                    if hasattr(date, "timestamp")
+                    else date
+                ),
                 "open": float(getattr(row, "Open")),
                 "high": float(getattr(row, "High")),
                 "low": float(getattr(row, "Low")),
@@ -109,7 +117,9 @@ def _rolling_levels(series: pd.Series, window: int, mode: str) -> List[float]:
     return levels
 
 
-def _deduplicate_levels(levels: Iterable[float], tolerance: float = 0.01, reverse: bool = False) -> List[float]:
+def _deduplicate_levels(
+    levels: Iterable[float], tolerance: float = 0.01, reverse: bool = False
+) -> List[float]:
     uniques: List[float] = []
     for level in sorted(levels, reverse=reverse):
         if not uniques:
@@ -299,7 +309,9 @@ class Epic3TechnicalAnalyzer:
         resistances_raw = _rolling_levels(closes, window=3, mode="resistance")
 
         supports = _deduplicate_levels(supports_raw, tolerance=0.015)
-        resistances = _deduplicate_levels(resistances_raw, tolerance=0.015, reverse=True)
+        resistances = _deduplicate_levels(
+            resistances_raw, tolerance=0.015, reverse=True
+        )
 
         lookback_high = df["high"].rolling(window=90, min_periods=1).max().iloc[-1]
         lookback_low = df["low"].rolling(window=90, min_periods=1).min().iloc[-1]
@@ -341,11 +353,19 @@ class Epic3TechnicalAnalyzer:
             "intercept": round(float(intercept), 4),
             "endpoints": {
                 "start": {
-                    "index": int(df.index[-trend_window].to_julian_date()) if hasattr(df.index, "to_julian_date") else int(x[0]),
+                    "index": (
+                        int(df.index[-trend_window].to_julian_date())
+                        if hasattr(df.index, "to_julian_date")
+                        else int(x[0])
+                    ),
                     "price": round(float(start_price), 2),
                 },
                 "end": {
-                    "index": int(df.index[-1].to_julian_date()) if hasattr(df.index, "to_julian_date") else int(x[-1]),
+                    "index": (
+                        int(df.index[-1].to_julian_date())
+                        if hasattr(df.index, "to_julian_date")
+                        else int(x[-1])
+                    ),
                     "price": round(float(end_price), 2),
                 },
             },
@@ -354,7 +374,9 @@ class Epic3TechnicalAnalyzer:
         patterns = {
             "support_levels": [round(float(level), 2) for level in supports],
             "resistance_levels": [round(float(level), 2) for level in resistances],
-            "fibonacci": {key: round(float(value), 2) for key, value in fibonacci.items()},
+            "fibonacci": {
+                key: round(float(value), 2) for key, value in fibonacci.items()
+            },
             "trendline": trendline,
         }
 
@@ -372,7 +394,9 @@ class Epic3TechnicalAnalyzer:
     ) -> Dict[str, Any]:
         indicators = self.compute_indicator_suite()
         patterns = self.detect_price_patterns()
-        momentum_score, trend_score, notes = self._score_components(indicators, patterns)
+        momentum_score, trend_score, notes = self._score_components(
+            indicators, patterns
+        )
         total_score = min(10.0, round(trend_score + momentum_score, 2))
 
         fundamental_bias = 0.0
@@ -545,8 +569,13 @@ class Epic3TechnicalAnalyzer:
     # ------------------------------------------------------------------ #
     # Performance Metrics
 
-    def compute_performance_metrics(self, *, risk_free_rate: float = RISK_FREE_DEFAULT) -> Dict[str, Any]:
-        if "performance" in self._cache and self._cache["performance"].get("risk_free_rate") == risk_free_rate:
+    def compute_performance_metrics(
+        self, *, risk_free_rate: float = RISK_FREE_DEFAULT
+    ) -> Dict[str, Any]:
+        if (
+            "performance" in self._cache
+            and self._cache["performance"].get("risk_free_rate") == risk_free_rate
+        ):
             return self._cache["performance"]
 
         df = self._df
@@ -586,7 +615,9 @@ class Epic3TechnicalAnalyzer:
             "risk_free_rate": risk_free_rate,
             "max_drawdown": round(max_drawdown, 4),
             "sharpe_ratio": round(float(sharpe), 3),
-            "calmar_ratio": round(float(calmar), 3) if math.isfinite(calmar) else float("inf"),
+            "calmar_ratio": (
+                round(float(calmar), 3) if math.isfinite(calmar) else float("inf")
+            ),
             "volatility": round(float(volatility), 4),
             "total_return": round(float(cumulative.iloc[-1] - 1), 4),
             "annual_return": round(float(annual_return), 4),
@@ -612,7 +643,9 @@ class Epic3TechnicalAnalyzer:
 
         if go and make_subplots:
             try:
-                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
+                fig = make_subplots(
+                    rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3]
+                )
                 fig.add_trace(
                     go.Candlestick(
                         x=df["date"],
@@ -629,40 +662,72 @@ class Epic3TechnicalAnalyzer:
                 indicators = self.compute_indicator_suite()
                 sma = indicators["sma"]
                 fig.add_trace(
-                    go.Scatter(x=df["date"], y=df["close"].rolling(window=20).mean(), name="SMA 20", line=dict(width=1)),
+                    go.Scatter(
+                        x=df["date"],
+                        y=df["close"].rolling(window=20).mean(),
+                        name="SMA 20",
+                        line=dict(width=1),
+                    ),
                     row=1,
                     col=1,
                 )
                 if sma["sma50"]:
                     fig.add_trace(
-                        go.Scatter(x=df["date"], y=df["close"].rolling(window=50).mean(), name="SMA 50", line=dict(width=1)),
+                        go.Scatter(
+                            x=df["date"],
+                            y=df["close"].rolling(window=50).mean(),
+                            name="SMA 50",
+                            line=dict(width=1),
+                        ),
                         row=1,
                         col=1,
                     )
                 if sma["sma200"]:
                     fig.add_trace(
-                        go.Scatter(x=df["date"], y=df["close"].rolling(window=200).mean(), name="SMA 200", line=dict(width=1)),
+                        go.Scatter(
+                            x=df["date"],
+                            y=df["close"].rolling(window=200).mean(),
+                            name="SMA 200",
+                            line=dict(width=1),
+                        ),
                         row=1,
                         col=1,
                     )
 
-                macd = self.compute_indicator_suite()["macd"]
-                macd_line = df["close"].ewm(span=12, adjust=False).mean() - df["close"].ewm(span=26, adjust=False).mean()
+                macd_line = (
+                    df["close"].ewm(span=12, adjust=False).mean()
+                    - df["close"].ewm(span=26, adjust=False).mean()
+                )
                 signal_line = macd_line.ewm(span=9, adjust=False).mean()
                 histogram = macd_line - signal_line
 
                 fig.add_trace(
-                    go.Scatter(x=df["date"], y=macd_line, name="MACD", line=dict(color="#2962FF")),
+                    go.Scatter(
+                        x=df["date"],
+                        y=macd_line,
+                        name="MACD",
+                        line=dict(color="#2962FF"),
+                    ),
                     row=2,
                     col=1,
                 )
                 fig.add_trace(
-                    go.Scatter(x=df["date"], y=signal_line, name="Signal", line=dict(color="#FF6D00")),
+                    go.Scatter(
+                        x=df["date"],
+                        y=signal_line,
+                        name="Signal",
+                        line=dict(color="#FF6D00"),
+                    ),
                     row=2,
                     col=1,
                 )
                 fig.add_trace(
-                    go.Bar(x=df["date"], y=histogram, name="Histogram", marker_color=np.where(histogram >= 0, "#00c853", "#d50000")),
+                    go.Bar(
+                        x=df["date"],
+                        y=histogram,
+                        name="Histogram",
+                        marker_color=np.where(histogram >= 0, "#00c853", "#d50000"),
+                    ),
                     row=2,
                     col=1,
                 )
@@ -675,7 +740,9 @@ class Epic3TechnicalAnalyzer:
 
                 figure_payload = json.loads(fig.to_json())
                 try:
-                    fig.write_image(str(png_path), format="png", width=1280, height=720, scale=2)
+                    fig.write_image(
+                        str(png_path), format="png", width=1280, height=720, scale=2
+                    )
                 except Exception:
                     _write_placeholder_png(png_path)
             except Exception:  # pragma: no cover - fallback path
@@ -684,9 +751,13 @@ class Epic3TechnicalAnalyzer:
             _write_placeholder_png(png_path)
 
         if not json_path.exists():
-            json_path.write_text(json.dumps(figure_payload, default=str), encoding="utf-8")
+            json_path.write_text(
+                json.dumps(figure_payload, default=str), encoding="utf-8"
+            )
         else:
-            json_path.write_text(json.dumps(figure_payload, default=str), encoding="utf-8")
+            json_path.write_text(
+                json.dumps(figure_payload, default=str), encoding="utf-8"
+            )
 
         return {"png": png_path, "json": json_path}
 

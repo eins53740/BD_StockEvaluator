@@ -22,8 +22,7 @@ def daily_report_module(tmp_path, monkeypatch):
     (config_dir / "sp500_tickers.txt").write_text("AAPL,MSFT", encoding="utf-8")
     (config_dir / "my_tickers_y.txt").write_text("MSFT,AAPL", encoding="utf-8")
     (config_dir / "portfolio.csv").write_text(
-        "ticker,quantity,buy_price,buy_date,currency\n"
-        "AAPL,1,100,2024-01-01,USD\n",
+        "ticker,quantity,buy_price,buy_date,currency\n" "AAPL,1,100,2024-01-01,USD\n",
         encoding="utf-8",
     )
 

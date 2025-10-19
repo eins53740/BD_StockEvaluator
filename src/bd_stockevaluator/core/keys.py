@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def _env_key_candidates(key_name: str) -> list[str]:
@@ -37,7 +40,9 @@ def get_api_key(key_name: str) -> Optional[str]:
 
     config_path = Path(__file__).resolve().parents[2] / "config" / "api_keys.txt"
     try:
-        for raw in config_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        for raw in config_path.read_text(
+            encoding="utf-8", errors="ignore"
+        ).splitlines():
             line = raw.strip()
             if not line or line.startswith("#"):
                 continue
@@ -48,9 +53,9 @@ def get_api_key(key_name: str) -> Optional[str]:
             if key.strip() == key_name:
                 return value.strip().strip('"')
     except FileNotFoundError:
-        print(f"Warning: Config file not found at {config_path}")
+        logger.debug("Config file not found at %s", config_path)
     except Exception as exc:
-        print(f"Warning: Could not read API key ({exc})")
+        logger.warning("Could not read API key file %s: %s", config_path, exc)
     return None
 
 

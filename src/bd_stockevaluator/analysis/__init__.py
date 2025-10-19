@@ -34,7 +34,10 @@ def __getattr__(name: str) -> Any:
         "MoatScorecardBuilder": (".epic5_qualitative", "MoatScorecardBuilder"),
         "MoatAssessmentInput": (".epic5_qualitative", "MoatAssessmentInput"),
         "OwnershipTrendAnalyzer": (".epic5_qualitative", "OwnershipTrendAnalyzer"),
-        "ManagementQualityAnalyzer": (".epic5_qualitative", "ManagementQualityAnalyzer"),
+        "ManagementQualityAnalyzer": (
+            ".epic5_qualitative",
+            "ManagementQualityAnalyzer",
+        ),
     }
     if name in mapping:
         module_name, attr = mapping[name]

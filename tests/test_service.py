@@ -1,17 +1,16 @@
 import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from bd_stockevaluator.core.service import STATIC_DIR, StockAnalysisService
 
 
-@patch("core.service.MACRO_SERVICE")
-@patch("core.service.generate_stock_opinion")
-@patch("core.service.StockAnalysisFeatures")
-@patch("core.service.StockEvaluator")
-@patch("core.service.Epic2Analyzer")
-@patch("core.service.Epic3TechnicalAnalyzer")
-@patch("core.service.get_stock_data")
+@patch("bd_stockevaluator.core.service.MACRO_SERVICE")
+@patch("bd_stockevaluator.core.service.generate_stock_opinion")
+@patch("bd_stockevaluator.core.service.StockAnalysisFeatures")
+@patch("bd_stockevaluator.core.service.StockEvaluator")
+@patch("bd_stockevaluator.core.service.Epic2Analyzer")
+@patch("bd_stockevaluator.core.service.Epic3TechnicalAnalyzer")
+@patch("bd_stockevaluator.core.service.get_stock_data")
 def test_analyze_full_flow(
     get_stock_data_mock,
     epic3_cls_mock,
@@ -25,8 +24,22 @@ def test_analyze_full_flow(
         "longName": "Acme Corp",
         "ticker": "ACME",
         "priceHistory": [
-            {"date": "2024-01-08", "open": 150.0, "high": 155.0, "low": 149.0, "close": 154.0, "volume": 1_200_000},
-            {"date": "2024-01-09", "open": 154.0, "high": 156.0, "low": 153.0, "close": 155.0, "volume": 1_100_000},
+            {
+                "date": "2024-01-08",
+                "open": 150.0,
+                "high": 155.0,
+                "low": 149.0,
+                "close": 154.0,
+                "volume": 1_200_000,
+            },
+            {
+                "date": "2024-01-09",
+                "open": 154.0,
+                "high": 156.0,
+                "low": 153.0,
+                "close": 155.0,
+                "volume": 1_100_000,
+            },
         ],
     }
 
@@ -42,7 +55,9 @@ def test_analyze_full_flow(
     features_instance = MagicMock()
     features_instance.get_risk_assessment.return_value = {"overall_risk_score": 25}
     features_instance.get_trend_analysis.return_value = {"trends": {}}
-    features_instance.get_comparative_analysis.return_value = {"valuation_vs_peers": "Fairly Valued"}
+    features_instance.get_comparative_analysis.return_value = {
+        "valuation_vs_peers": "Fairly Valued"
+    }
     features_instance.get_dividend_analysis.return_value = {"current_yield": 0.02}
     features_cls_mock.return_value = features_instance
 
@@ -117,18 +132,22 @@ def test_analyze_full_flow(
     assert result["macro_context"]["alignment"]["risk_bias"] == "balanced"
 
     evaluator_cls_mock.assert_called_once()
-    features_cls_mock.assert_called_once_with("acme", get_stock_data_mock.return_value, None)
+    features_cls_mock.assert_called_once_with(
+        "acme", get_stock_data_mock.return_value, None
+    )
     opinion_mock.assert_called_once()
-    epic2_cls_mock.assert_called_once_with(get_stock_data_mock.return_value, None, sector=None)
+    epic2_cls_mock.assert_called_once_with(
+        get_stock_data_mock.return_value, None, sector=None
+    )
 
 
-@patch("core.service.MACRO_SERVICE")
-@patch("core.service.generate_stock_opinion")
-@patch("core.service.StockAnalysisFeatures")
-@patch("core.service.StockEvaluator")
-@patch("core.service.Epic2Analyzer")
-@patch("core.service.Epic3TechnicalAnalyzer")
-@patch("core.service.get_stock_data")
+@patch("bd_stockevaluator.core.service.MACRO_SERVICE")
+@patch("bd_stockevaluator.core.service.generate_stock_opinion")
+@patch("bd_stockevaluator.core.service.StockAnalysisFeatures")
+@patch("bd_stockevaluator.core.service.StockEvaluator")
+@patch("bd_stockevaluator.core.service.Epic2Analyzer")
+@patch("bd_stockevaluator.core.service.Epic3TechnicalAnalyzer")
+@patch("bd_stockevaluator.core.service.get_stock_data")
 def test_analyze_without_opinion(
     get_stock_data_mock,
     epic3_cls_mock,
@@ -142,8 +161,22 @@ def test_analyze_without_opinion(
         "longName": "Beta Inc",
         "ticker": "BETA",
         "priceHistory": [
-            {"date": "2024-01-08", "open": 80.0, "high": 81.0, "low": 79.5, "close": 80.5, "volume": 800_000},
-            {"date": "2024-01-09", "open": 80.5, "high": 80.8, "low": 79.8, "close": 80.1, "volume": 750_000},
+            {
+                "date": "2024-01-08",
+                "open": 80.0,
+                "high": 81.0,
+                "low": 79.5,
+                "close": 80.5,
+                "volume": 800_000,
+            },
+            {
+                "date": "2024-01-09",
+                "open": 80.5,
+                "high": 80.8,
+                "low": 79.8,
+                "close": 80.1,
+                "volume": 750_000,
+            },
         ],
     }
 
@@ -217,8 +250,11 @@ def test_analyze_without_opinion(
     opinion_mock.assert_not_called()
 
 
-@patch("core.service.get_stock_data", side_effect=ValueError("Ticker not found"))
-@patch("core.service.MACRO_SERVICE")
+@patch(
+    "bd_stockevaluator.core.service.get_stock_data",
+    side_effect=ValueError("Ticker not found"),
+)
+@patch("bd_stockevaluator.core.service.MACRO_SERVICE")
 def test_analyze_raises_when_data_missing(macro_service_mock, get_stock_data_mock):
     service = StockAnalysisService()
     with pytest.raises(ValueError):

@@ -71,7 +71,10 @@ def test_epic2_analyzer_builds_expected_outputs():
     assert "dcf" in intrinsic
     assert intrinsic["dcf"]["value"] > 0
     assert "ben_graham" in intrinsic
-    assert intrinsic["ben_graham"]["margin_of_safety_price"] < intrinsic["ben_graham"]["value"]
+    assert (
+        intrinsic["ben_graham"]["margin_of_safety_price"]
+        < intrinsic["ben_graham"]["value"]
+    )
     if "ddm" in intrinsic:
         assert intrinsic["ddm"]["value"] > stock_info["regularMarketPrice"] * 0.5
 

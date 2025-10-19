@@ -3,16 +3,31 @@
 #
 import os
 import threading
-import time
 import atexit
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, flash, render_template, request
+from flask import Flask, flash, render_template, request, url_for
 
-from .core import StockAnalysisService, get_stock_data, refresh_macro_snapshot
-from .core.service import SCHEDULER_HOOKS
+try:
+    # Preferred path when executed as part of the installed package.
+    from .core import StockAnalysisService, get_stock_data, refresh_macro_snapshot
+    from .core.service import SCHEDULER_HOOKS
+except ImportError:  # pragma: no cover - fallback for direct script execution
+    import sys
+    from pathlib import Path
+
+    package_root = Path(__file__).resolve().parent
+    src_root = package_root.parent
+    if str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
+    from bd_stockevaluator.core import (
+        StockAnalysisService,
+        get_stock_data,
+        refresh_macro_snapshot,
+    )
+    from bd_stockevaluator.core.service import SCHEDULER_HOOKS
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +48,11 @@ _refresh_stop_event = threading.Event()
 
 def _background_worker(tickers, interval_minutes):
     interval_seconds = max(60, int(interval_minutes) * 60)
-    app.logger.info("Starting background refresh for %s (interval %s minutes)", tickers, interval_minutes)
+    app.logger.info(
+        "Starting background refresh for %s (interval %s minutes)",
+        tickers,
+        interval_minutes,
+    )
     # Initial warm-up pass
     try:
         refresh_macro_snapshot()
@@ -67,9 +86,13 @@ def start_background_refresh():
     if not enabled:
         return
     raw_tickers = os.environ.get("REFRESH_TICKERS", "")
-    tickers = [symbol.strip().upper() for symbol in raw_tickers.split(",") if symbol.strip()]
+    tickers = [
+        symbol.strip().upper() for symbol in raw_tickers.split(",") if symbol.strip()
+    ]
     if not tickers:
-        app.logger.warning("ENABLE_BACKGROUND_REFRESH is true but REFRESH_TICKERS is empty. Skipping scheduler bootstrap.")
+        app.logger.warning(
+            "ENABLE_BACKGROUND_REFRESH is true but REFRESH_TICKERS is empty. Skipping scheduler bootstrap."
+        )
         return
     interval = int(os.environ.get("REFRESH_INTERVAL_MINUTES", "180") or "180")
     _refresh_thread = threading.Thread(
@@ -103,6 +126,13 @@ def index():
 
         try:
             analysis = analysis_service.analyze(ticker_symbol)
+            chart = analysis.get("technical_analysis", {}).get("chart", {})
+            chart_png = chart.get("png")
+            if chart_png:
+                chart["png_url"] = url_for(
+                    "static",
+                    filename=str(chart_png).replace("\\", "/"),
+                )
             return render_template("index.html", current_year=current_year, **analysis)
         except Exception as exc:
             # Clear cache to avoid stale errors, then show message to the user.

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = Path(__file__).resolve().parents[3]
 SECTOR_BENCHMARKS_PATH = BASE_DIR / "benchmarks" / "sector_medians.json"
 
 
