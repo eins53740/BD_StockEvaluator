@@ -83,21 +83,21 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 
 ### Epic 9 - Architecture & Infrastructure
 **Goal:** Keep the platform modular and maintainable.
-- F9.1 Core Python Modules - `bd_finance_core` (analysis engine) and `bd_finance_report` (outputs) reusable by desktop and Android backends.
+- F9.1 Core Python Modules - `bd_stockevaluator_core` (analysis engine) and `bd_stockevaluator_report` (outputs) reusable by desktop and Android backends.
 - F9.2 Storage Options - SQLite for local, optional PostgreSQL/cloud sync.
 - F9.3 API Gateway - Unified access to external providers with rate-limit handling.
 - F9.4 Deployment Tooling - PyInstaller/CI scripts for packaging dashboards and services.
 
 ### Epic 10 - Foreigner stocks and UI - UX improvement
-**Goal:** Extend ticker range tfrom usa to world. Improve UX.
+**Goal:** Extend ticker range from usa to world. Improve UX.
  - F10.1 Multi-exchange equity support: Implement full international ticker handling using yfinance suffixes (e.g., TSCO.L, B3SA3.SA, DAI.DE, 7203.T) mapped to canonical exchange, country, and currency, storing these fields in persistence and exposing them via API. Fetch quotes and historical OHLC in native currency, then normalise to EUR and USD using a single timestamped FX snapshot per response for consistency (apply conversions before computing returns to keep % moves identical across currencies). Use a provider chain where Yahoo Finance is primary and FMP is an automatic fallback; surface data_provider and provider_fallback=true when triggered, with structured logging for fallbacks and FX snapshot IDs. Ensure exchange-timezone correctness for market open/close and include both asof_utc and asof_exchange_tz. Deliver a suffix→metadata registry, backfill missing metadata on first read of stored tickers, and add tests for ticker parsing, FX maths, provider failover, and snapshot equivalence of returns; update docs (supported suffixes, fields, flags) and dashboards for error/fallback rates.
  - F10.2 Flowchart text visibility (2-line labels & legibility): Add an automatic label-wrapping routine that measures text and splits at word boundaries into at most two lines, applying an ellipsis on the second line when overflow occurs. Vertically centre text within the shape, increase node height responsively to avoid clipping, and enforce minimum dimensions and padding so two lines remain readable at 75–150% zoom. Use theme-aware colours with a WCAG contrast ratio ≥ 4.5:1, consistent font size/line-height, and render via SVG <tspan> offsets or canvas equivalents. Provide a hover tooltip (and aria-label/title) that reveals the full, untruncated label for accessibility; include keyboard focus styles. Add visual regression tests for short/long labels, light/dark themes, and zoom scales, plus snapshot tests for the wrapping algorithm’s boundary cases.
  
  - F10.3 Evaluate and optimize the decision flow thresholds.
 
 
-### Epic 11 - Contaierisation
-**Goal:** Use the package in a containerised environment.
+### Epic 11 - Containerisation
+**Goal:** Use the package in a containerised environment. Optimize if we have the feature partially implemented.
  - F11.1 Containerise Python package & local test (real/mocked Docker): Produce a production-ready multi-stage Dockerfile (Python 3.12-slim, pinned dependencies, non-root user, healthcheck) and optional docker-compose.yml for one-command local bring-up. The container must start via python -m app, expose and probe a /health endpoint, and build cleanly with docker build -t app:local .. Introduce DOCKER_RUNTIME=real|mock to switch between the Docker SDK and a lightweight fake client, allowing CI to run fast without host Docker while retaining an opt-in job that exercises a real engine (e.g., nightly). Provide pytest examples that parametrise both modes, guard real-Docker tests behind DOCKER_AVAILABLE=1, and document local commands for build/run. Ensure CI uses mock by default, publishes an image on main, and includes README updates on build, run, environment variables, and test strategy.
 
 ---

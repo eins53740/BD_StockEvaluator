@@ -1,169 +1,175 @@
-# Stock Evaluator
+# BD Finance Stock Evaluator
 
-This project is a full-stack stock evaluation tool with a Python backend and a native Android client.
+## Executive Summary
+BD Finance Stock Evaluator delivers an end-to-end investing assistant that blends quantitative ratios, technical momentum, macro trends, qualitative moat scoring, AI commentary, portfolio automation, and cross-platform experiences. The project now satisfies every Epic in the V2 roadmap: the Python backend powers global market coverage, printable reports, automation jobs, and APIs; the Streamlit desktop overview and native Android client keep investors in sync; containerised deployment and documentation make it trivial to operate in production or share with non-technical stakeholders.
 
-- **Backend:** A powerful Python application using FastAPI and Flask to provide stock analysis, risk assessment, trend analysis, and more. It features dynamic flowchart visualizations of the evaluation process.
-- **Android Client:** A native Android application built with Kotlin, Jetpack Compose, and MVVM architecture to consume the backend API and display stock evaluations on a mobile device.
+## Highlights by Epic
+- **Epics 1 & 2 – Data Foundation & Fundamentals:** Multi-provider ingestion (Yahoo, FMP, Finnhub, Alpha Vantage) with automatic FX normalisation backs a rich valuation, profitability, growth, and intrinsic value engine exposed through reusable Python modules.
+- **Epic 3 – Technical & Momentum Toolkit:** MACD, RSI, ADX, Bollinger Bands, multi-period SMAs, trendline detection, and performance metrics feed both the backend scoring and interactive Streamlit charts.
+- **Epic 4 – Macro Context:** Daily/weekly/monthly macro series from FRED populate a macro dashboard with recession signals, sentiment overlays, and alignment against company fundamentals.
+- **Epic 5 – Qualitative & Moat Evaluation:** AI-assisted moat scoring, ownership trend analysis, and management quality summaries complement hard metrics.
+- **Epic 6 – Portfolio & Automation:** CSV/Excel import, performance analytics, watchlist alerts, automated daily report generation, and PDF/email artefacts provide portfolio-wide visibility.
+- **Epic 7 – UX & Platform Integration:** Streamlit desktop overview with Chart Explorer, printable WeasyPrint/PDFKit reports, a sync-ready REST payload, and a Kotlin/Compose Android client now operate in lockstep.
+- **Epic 8 – AI & Automation Layer:** Groq/Gemini powered summaries, natural-language prompts, and scheduled commentary jobs plug into the same analysis payloads.
+- **Epic 9 – Architecture & Infrastructure:** Modular core packages (`bd_finance_core`, `bd_finance_report`), multiple storage backends (SQLite/PostgreSQL), and an API gateway support scalable deployments.
+- **Epic 10 – Global Markets & UX Refinements:** International ticker suffix support, FX conversions, and flowchart legibility improvements make worldwide coverage seamless.
+- **Epic 11 – Containerisation:** A production-ready Dockerfile, optional `docker-compose`, health checks, and documentation enable consistent, repeatable deployment with or without a local Docker engine.
 
-## What's New? 🎉
+## System Overview
+- **Python Backend (`src/bd_stockevaluator`)** – FastAPI + Flask, modular analysis services, scheduled jobs, reporting pipeline, AI integration, SQLite persistence, and optional PostgreSQL hooks.
+- **Streamlit Desktop Overview (`src/bd_stockevaluator/desktop`)** – Fundamentals/technicals/macro tabs, Chart Explorer, downloadable HTML/PDF one-pagers, and sync payload visualisation.
+- **Reporting & Automation (`src/bd_stockevaluator/reports`)** – Daily report orchestration, portfolio automation, and export utilities.
+- **Android Client (`android-client`)** – Kotlin/Compose app with Hilt, Retrofit, Room, and Material 3 theming consuming the REST API.
+- **Containerisation Assets** – Multi-stage Dockerfile, optional compose file, runtime toggles, and health endpoints for operations teams.
 
-Your Stock Evaluator has been significantly enhanced with professional-grade features:
+## Getting Started
+### 1. Prerequisites
+- Python 3.12+ (use the supplied `.python-version` if you work with `pyenv`)
+- Node-free; all UIs are Python/Android.
+- (Optional) Docker 24+ for container builds.
+- API keys for providers (store in `.env` or `config/api_keys.txt`).
 
-- **🎯 Advanced Risk Assessment** - Multi-factor risk scoring with actionable recommendations
-- **🌍 Macro Dashboard** - FRED-powered macro backdrop with recession and sentiment signals
-- **📈 Trend Analysis** - Multi-timeframe momentum and consistency analysis  
-- **🔍 Comparative Analysis** - Industry benchmarking and peer comparison
-- **💰 Dividend Analysis** - Yield attractiveness and sustainability assessment
-- **🎨 Animated Flowcharts** - Dynamic visualizations with status-based coloring
-- **📱 Mobile Ready** - PWA support and Android APK deployment capability
-
-## Project Structure
-
-- `src/bd_stockevaluator`: The Python backend source code.
-- `android-client`: The Android client source code.
-- `docs`: Project documentation.
-
-## Quick Setup (2 minutes) ⚡
-
-### 1. Install Dependencies
+### 2. Backend Setup
 ```bash
+python -m venv .venv
+. .venv/Scripts/activate  # PowerShell on Windows
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 2. Run the Web UI (Flask)
+Launch the API (all platforms can share it):
+```bash
+uvicorn bd_stockevaluator.api.main:app --host 0.0.0.0 --port 8000
+```
+Health check: `http://localhost:8000/health`
+
+To view the legacy Flask UI:
 ```bash
 python src/bd_stockevaluator/app.py
+# visit http://localhost:5000
 ```
 
-### 3. Run the REST API (FastAPI)
+### 3. Streamlit Desktop Overview
 ```bash
-uvicorn src.bd_stockevaluator.api.main:app --reload
+streamlit run -m bd_stockevaluator.desktop.overview
 ```
+The app provides fundamentals, technicals, macro context, Chart Explorer, and downloadable reports for any ticker list.
 
-### 4. Open the Web UI
-Navigate to: `http://localhost:5000`
+### 4. Android Client
+1. Open `android-client` in Android Studio.
+2. Set `API_BASE_URL` (in `build.gradle.kts`) to an address your device can reach (`http://192.168.x.x:8000/`).
+3. If running on an emulator, `10.0.2.2` points to the host. For physical devices, ensure both phone and backend host share a network.
+4. Build & run: `./gradlew assembleDebug` then install the APK.
 
-### 5. Hit the API (optional)
-Try `http://localhost:8000/health` or `POST http://localhost:8000/evaluate` with a JSON body:
-```json
-{"ticker": "MSFT", "include_opinion": true}
-```
-
-## How to Use 📖
-
-### Basic Stock Analysis
-1. Enter any stock ticker (e.g., `MSFT`, `AAPL`, `GOOGL`)
-2. Click "Evaluate" 
-3. View the animated decision flowchart
-4. Review the comprehensive analysis sections below
-
-### Understanding the Results
-
-#### 🎯 Risk Assessment
-- **Risk Score**: 0-100% (lower is better)
-- **Risk Level**: Low/Moderate/High/Very High Risk
-- **Recommendations**: Specific actions based on risk factors
-
-#### 📈 Trend Analysis  
-- **Multi-timeframe Returns**: 1mo, 3mo, 6mo, 1y performance
-- **Momentum Score**: Weighted momentum across timeframes
-- **Trend Consistency**: How consistent trends are across periods
-
-#### 🔍 Comparative Analysis
-- **Market Cap Category**: Micro/Small/Mid/Large/Mega Cap
-- **Valuation**: Under/Fairly/Over-valued vs typical ranges
-- **Growth**: High/Moderate/Low/Declining growth profile
-- **Profitability**: Profitability vs industry standards
-
-#### 💰 Dividend Analysis
-- **Current Yield**: Annual dividend as % of price
-- **Sustainability**: Very Sustainable to At Risk
-- **Attractiveness**: Very Low to High Yield rating
-
-## Advanced Features 🔧
-
-### Animated Flowcharts
-- Nodes appear sequentially with smooth animations
-- Status-based coloring: Green (Pass), Red (Fail), Yellow (Close)
-- Interactive hover tooltips with detailed information
-- Risk indicators and visual feedback
-
-### Mobile Support
-- **Progressive Web App**: Install on mobile devices
-- **Responsive Design**: Optimized for all screen sizes
-- **Offline Capability**: View cached results without internet
-- **Android APK**: Convert to native mobile app (see DEPLOYMENT_GUIDE.md)
-
-## Testing Your Setup 🧪
-
-### Run Demo
+### 5. Docker Deployment
+Build a minimal runtime image (installs only `requirements.docker.txt`):
 ```bash
-python src/bd_stockevaluator/demo.py
+docker build -t bd-finance:runtime .
+docker run -p 8000:8000 bd-finance:runtime
 ```
-This demonstrates all features with sample data.
-
-### Run Tests
+Use the full dependency set:
 ```bash
-# Test flowchart generation
-python tests/test_flowchart.py
-
-# Test integration
-python tests/test_integration.py
+docker build -t bd-finance:full --build-arg FULL_REQUIREMENTS=1 .
 ```
+Add `GITHUB_TOKEN` when needed so pip can access private repos. Health endpoint: `GET /health`.
 
-## Customization Options ⚙️
+Optional `docker-compose.yml` (if present) provides one-command bring-up with `docker compose up`.
 
-### Modify Evaluation Thresholds
-Edit `src/bd_stockevaluator/evaluator.py` THRESHOLDS dictionary:
-```python
-THRESHOLDS = {
-    "rev_growth": 0.10,  # 10% revenue growth
-    "pe": 25,            # P/E ratio threshold
-    "roe": 0.15,         # 15% ROE threshold
-    # ... customize as needed
-}
-```
+## Portfolio Automation & Reporting
+- **Daily Report (`src/bd_stockevaluator/reports/daily_report.py`)** – Generates market snapshots, holdings summaries, automated emails, and portfolio PDFs.
+- **Printable Reports (`src/bd_stockevaluator/reports/per_ticker.py`)** – Compose per-ticker summaries and render via WeasyPrint (preferred) or PDFKit fallback.
+- **Portfolio Automation (`src/bd_stockevaluator/reports/portfolio_automation.py`)** – Creates performance dashboards, alert lists, and macro overlays; integrates with the daily report workflow.
 
-### Add New Risk Factors
-Extend `src/bd_stockevaluator/features.py` StockAnalysisFeatures class with new analysis methods.
+## Global Market Support
+- The data pipeline understands multi-exchange ticker suffixes, fetches native currency OHLC data, and stores canonical exchange/currency metadata.
+- FX conversions standardise metrics to USD/EUR while retaining local-currency context. Provider precedence and fallback logging ensure resilience.
+- Flowchart rendering improvements (automatic wrapping, accessibility-friendly colours) keep decision paths readable even for long international labels.
 
-### Customize UI Colors
-Modify CSS variables in `src/bd_stockevaluator/templates/index.html`:
-```css
-:root {
-    --color-primary: #007bff;    /* Change primary color */
-    --color-pass: #198754;       /* Success color */
-    --color-fail: #dc3545;       /* Failure color */
-}
-```
+## AI & Automation Features
+- Opinion summaries from Groq/Gemini, natural-language screening, and scheduled commentary jobs surface qualitative insights alongside core metrics.
+- Watchlist alerts and background schedulers (WorkManager/cron) keep both Android and desktop users informed automatically.
 
-## Troubleshooting 🔧
-
-### Common Issues
-
-**"Module not found" errors**
+## Testing & Quality
 ```bash
-pip install -r requirements.txt
+# Run the full Python test suite
+pytest
+
+# Lint & format
+ruff check .
+black .
+```
+Specific suites (e.g., `tests/test_epic7_streamlit_app.py`, `tests/test_epic7_sync_layer.py`) verify new epics such as Chart Explorer and sync payloads.
+
+## Data Sources & Credentials
+- `.env` or `config/api_keys.txt` supports keys such as `api_key_aistudio_google`, `FRED_API_KEY`, `api_key_fmp`, `groq_api_key`, etc.
+- The backend gracefully handles missing providers, logging fallbacks and surfacing the active data provider in API responses.
+
+## Project Roadmap Status
+All epics from 1 through 11 are implemented. The repository now includes global market support, enhanced UX across desktop and Android, robust reporting, AI copilots, and container-ready assets-bringing BD Finance Stock Evaluator to a production-quality, investor-friendly solution.
+
+## How the Platform Flows (Audience: Everyone)
+```mermaid
+flowchart LR
+    Investor(["Investor selects ticker"])
+    Channels{{"Desktop overview\nor Android app"}}
+    API["REST API / Sync layer\n(FastAPI)"]
+    Engine["Analysis engine\nfundamentals • technicals • macro • AI"]
+    Reports["Printable & daily reports\n(HTML, PDF, email)"]
+    Storage["SQLite / optional PostgreSQL\n+ FX snapshots"]
+    Providers["Market data & macro providers\n(Yahoo, FMP, Finnhub, Alpha Vantage, FRED)"]
+
+    Investor --> Channels --> API --> Engine --> Reports
+    Engine --> Storage
+    Engine --> Providers
+    Reports --> Investor
 ```
 
-**API key issues**
-- Ensure `config/api_keys.txt` exists
-- Add your Google AI Studio API key: `api_key_aistudio_google=your_key_here`
-- Add your FRED API key: `FRED_API_KEY=your_key_here` in `.env` or `config/api_keys.txt`
+The reader journey is straightforward: an investor requests a ticker from any interface, the shared analysis engine enriches it with provider and macro data, and both in-app insights and printable summaries reflect the same numbers.
 
-**Flowchart not rendering**
-- Check browser console for JavaScript errors
-- Ensure internet connection for Mermaid CDN
-- Try refreshing the page
+## Technical Architecture Diagram (Audience: IT Teams)
+```mermaid
+flowchart TB
+    subgraph Clients
+        ST[Streamlit desktop]
+        AND[Android (Compose)]
+        Jobs[CLI jobs & schedulers]
+    end
 
-**Mobile features not working**
-```bash
-python src/bd_stockevaluator/mobile_config.py  # Regenerate mobile files
+    subgraph Backend["Python backend"]
+        API["FastAPI REST / sync endpoints"]
+        Flask["Flask single-ticker UI"]
+        Service["StockAnalysisService\nSync payload builder"]
+        ReportsMod["Reporting & automation modules"]
+        Portfolio["Portfolio & watchlist services"]
+        DataStore["SQLiteDataStore / FX cache"]
+    end
+
+    subgraph Providers["External services"]
+        MultiSource["MultiSourceDataClient\n(Yahoo, FMP, Finnhub, Alpha Vantage)"]
+        Macro["MacroContextService\n(FRED + CSV fallbacks)"]
+        AIEngines["Groq / Gemini AI"]
+    end
+
+    subgraph Operations
+        Docker["Docker image & healthcheck"]
+        CI["CI pipelines\npytest • lint • image build"]
+    end
+
+    ST --> API
+    AND --> API
+    Jobs --> ReportsMod
+    API --> Service
+    Flask --> Service
+    Service --> ReportsMod
+    Service --> Portfolio
+    Service --> DataStore
+    Service --> MultiSource
+    Service --> Macro
+    Service --> AIEngines
+    ReportsMod --> DataStore
+    Docker --> API
+    Docker --> Flask
+    CI --> Docker
 ```
 
-## Dependencies
-
-Python dependencies are managed using `pyproject.toml`. For development, install the optional dependencies:
-```bash
-pip install -e .[dev]
-```
+This perspective emphasises the modular boundaries: clients only communicate through the API, the analysis service orchestrates providers and storage, and operations teams rely on container and CI assets for predictable deployments.

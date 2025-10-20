@@ -2,7 +2,10 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     container_name: stock-evaluator-api
     ports:
       - "8000:8000"
@@ -12,7 +15,10 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me}
     restart: unless-stopped
   test:
-    build: .
+    build:
+      context: .
+      args:
+        GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     image: bd-stockevaluator-test
     container_name: bd-stockevaluator-test
     command: pytest -q
