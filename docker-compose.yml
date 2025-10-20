@@ -21,7 +21,8 @@ services:
         GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     image: bd-stockevaluator-test
     container_name: bd-stockevaluator-test
-    command: pytest -q
+    # Install test dependencies at container start then run pytest
+    command: /bin/sh -lc "pip install --upgrade pip && pip install -r requirements.test.txt && pytest -q"
     environment:
       SECRET_KEY: ${SECRET_KEY:-change-me}
     volumes:

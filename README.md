@@ -131,7 +131,7 @@ The reader journey is straightforward: an investor requests a ticker from any in
 flowchart TB
     subgraph Clients
         ST[Streamlit desktop]
-        AND[Android (Compose)]
+        AndroidClient["Android (Compose)"]
         Jobs[CLI jobs & schedulers]
     end
 
@@ -156,7 +156,7 @@ flowchart TB
     end
 
     ST --> API
-    AND --> API
+    AndroidClient --> API
     Jobs --> ReportsMod
     API --> Service
     Flask --> Service

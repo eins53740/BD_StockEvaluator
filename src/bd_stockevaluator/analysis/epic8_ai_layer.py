@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import json
 
-from groq import Groq
+try:
+    from groq import Groq
+except Exception:  # pragma: no cover - optional dependency for AI features
+    class Groq:  # minimal placeholder so tests can import and patch
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "Optional package 'groq' is not installed. Install it or mock 'Groq' in tests."
+            )
 
 
 class FinancialSummaryAgent:
