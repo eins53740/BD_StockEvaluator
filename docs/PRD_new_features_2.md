@@ -76,10 +76,10 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 
 ### Epic 8 - AI & Automation Layer (v2 Enhancements)
 **Goal:** Upgrade AI capabilities beyond the current second opinion.
-- F8.1 Financial Summary Agent - Use Groq/Gemini to summarise the expanded metrics with a 1-10 rating rationale.
-- F8.2 Market Commentary Bot - Generate daily/weekly macro and sentiment summaries.
-- F8.3 Natural-Language Screener - Handle queries like "find cheap tech stocks with ROE > 15% and low debt."
-- F8.4 Optional Predictive Models - Integrate ML for sentiment scoring or short-term momentum forecasts.
+- [x] F8.1 Financial Summary Agent - Use Groq/Gemini to summarise the expanded metrics with a 1-10 rating rationale.
+- [x] F8.2 Market Commentary Bot - Generate daily/weekly macro and sentiment summaries.
+- [x] F8.3 Natural-Language Screener - Handle queries like "find cheap tech stocks with ROE > 15% and low debt."
+- [x] F8.4 Optional Predictive Models - Integrate ML for sentiment scoring or short-term momentum forecasts.
 
 ### Epic 9 - Architecture & Infrastructure
 **Goal:** Keep the platform modular and maintainable.

@@ -11,3 +11,15 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SECRET_KEY: ${SECRET_KEY:-change-me}
     restart: unless-stopped
+  test:
+    build: .
+    image: bd-stockevaluator-test
+    container_name: bd-stockevaluator-test
+    command: pytest -q
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+    volumes:
+      - ./:/app:cached
+    tty: false
+    stdin_open: false
+    restart: "no"
