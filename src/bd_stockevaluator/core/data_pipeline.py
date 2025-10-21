@@ -133,6 +133,8 @@ class NormalizedSnapshot:
     ticker: str
     as_of: datetime
     currency: str
+    exchange: Optional[str]
+    country: Optional[str]
     fundamentals: Dict[str, Any]
     fundamentals_converted: Dict[str, Any]
     prices: Dict[str, Any]
@@ -142,6 +144,7 @@ class NormalizedSnapshot:
     providers: Dict[str, Optional[str]]
     history: List[Dict[str, Any]]
     price_history: List[Dict[str, Any]]
+    fx_rates: Dict[str, float]
 
 
 class SQLiteDataStore:
@@ -167,6 +170,8 @@ class SQLiteDataStore:
                 as_of TEXT NOT NULL,
                 provider TEXT,
                 currency TEXT,
+                exchange TEXT,
+                country TEXT,
                 eps REAL,
                 pe REAL,
                 peg REAL,
@@ -306,6 +311,8 @@ class SQLiteDataStore:
                     as_of,
                     provider,
                     currency,
+                    exchange,
+                    country,
                     eps,
                     pe,
                     peg,
@@ -320,11 +327,13 @@ class SQLiteDataStore:
                     eps_usd,
                     eps_eur,
                     raw_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker) DO UPDATE SET
                     as_of=excluded.as_of,
                     provider=excluded.provider,
                     currency=excluded.currency,
+                    exchange=excluded.exchange,
+                    country=excluded.country,
                     eps=excluded.eps,
                     pe=excluded.pe,
                     peg=excluded.peg,
@@ -345,6 +354,8 @@ class SQLiteDataStore:
                     as_of_iso,
                     snapshot.providers.get("fundamentals"),
                     snapshot.currency,
+                    snapshot.exchange,
+                    snapshot.country,
                     snapshot.fundamentals.get("eps"),
                     snapshot.fundamentals.get("pe"),
                     snapshot.fundamentals.get("peg"),
@@ -555,6 +566,8 @@ class SQLiteDataStore:
                 as_of,
                 provider,
                 currency,
+                exchange,
+                country,
                 eps,
                 pe,
                 peg,
@@ -1573,6 +1586,9 @@ class MultiSourceDataClient:
         )
         currency = currency.upper() if isinstance(currency, str) else "USD"
 
+        exchange = profile.get("exchange")
+        country = profile.get("country")
+
         fundamentals_converted = {}
         eps = fundamentals.get("eps")
         if eps is not None:
@@ -1626,6 +1642,8 @@ class MultiSourceDataClient:
             ticker=ticker,
             as_of=as_of,
             currency=currency,
+            exchange=exchange,
+            country=country,
             fundamentals=fundamentals,
             fundamentals_converted=fundamentals_converted,
             prices=prices_clean,
@@ -1635,12 +1653,15 @@ class MultiSourceDataClient:
             providers=providers_map,
             history=history_entries,
             price_history=price_history_entries,
+            fx_rates=converter.rates,
         )
 
     def _build_stock_info(self, snapshot: NormalizedSnapshot) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "ticker": snapshot.ticker,
             "currency": snapshot.prices.get("currency", snapshot.currency),
+            "exchange": snapshot.exchange,
+            "country": snapshot.country,
             "regularMarketPrice": snapshot.prices.get("close"),
             "regularMarketPreviousClose": snapshot.prices.get("previous_close"),
             "regularMarketPriceUSD": snapshot.prices_converted.get("close_usd"),
@@ -1655,6 +1676,27 @@ class MultiSourceDataClient:
             "historicalMetrics": snapshot.history,
             "priceHistory": snapshot.price_history,
         }
+
+        # Add FX snapshot metadata and timestamps
+        info["fx_snapshot"] = snapshot.fx_rates or {}
+        info["asof_utc"] = snapshot.as_of.isoformat().replace("+00:00", "Z")
+        # For now, we mirror asof_utc for exchange tz; production may convert to exchange local tz
+        info["asof_exchange_tz"] = info["asof_utc"]
+
+        # Determine if any category used a fallback provider (not the top-precedence provider)
+        fallback = False
+        for category, provider in snapshot.providers.items():
+            if provider is None:
+                continue
+            preferred = None
+            try:
+                preferred = self.precedence.get(category, ())[0]
+            except Exception:
+                preferred = None
+            if preferred and provider != preferred:
+                fallback = True
+                break
+        info["provider_fallback"] = fallback
 
         data_providers = {
             "fundamentals": snapshot.providers.get("fundamentals"),

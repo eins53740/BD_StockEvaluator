@@ -5,6 +5,7 @@ import json
 try:
     from groq import Groq
 except Exception:  # pragma: no cover - optional dependency for AI features
+
     class Groq:  # minimal placeholder so tests can import and patch
         def __init__(self, *args, **kwargs):
             raise RuntimeError(

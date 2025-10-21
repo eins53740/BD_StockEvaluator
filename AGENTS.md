@@ -1,142 +1,242 @@
-# AGENTS.md
+# 🧭 Codex Agents — Universal Development & Contribution Guide
 
-## 🧭 Overview
-This document defines the development, testing, and pull request (PR) standards for Codex-based agents.  
-All contributors must follow these conventions to maintain **clean, consistent, and testable** code.
-
----
-
-## ⚙️ Development Environment
-
-### Toolchain
-- **Node:** Use the latest LTS version.  
-- **Python:** Use ≥3.11 for scripts or testing helpers.  
-- **Package Manager:** `pnpm` (preferred)  
-- **Linters & Formatters:**  
-  - **Ruff** – for linting and code quality checks.  
-  - **Black** – for code formatting.  
-- **Tests:**  
-  - **Unit tests:** Required for all new features or changes.  
-  - **Integration tests:** Required for interactions with external services (APIs, MQTT, etc.).  
-  - **Contract tests:** Recommended for validating message formats or schemas.
+> **Audience:** all contributors (human or agent).  
+> **Scope:** entire repository and subdirectories.  
+> **Priority:** deepest `AGENTS.md` file prevails if multiple exist.  
+> **Last Updated:** 2025-10-21
 
 ---
 
-### Dev Shortcuts
+## 1️⃣ Purpose & Principles
 
-| Action | Command |
-|--------|----------|
-| Jump to a workspace package | `pnpm dlx turbo run where <project_name>` |
-| Add a package to workspace | `pnpm install --filter <project_name>` |
-| Create new React+Vite+TS project | `pnpm create vite@latest <project_name> -- --template react-ts` |
-| Confirm correct package name | Check `"name"` field in `<package_name>/package.json` (not root) |
+- Guarantee **consistency, testability, and maintainability** of all Codex Agents.  
+- Educate contributors: every section ends with an **Extra Scholar Info** note for junior developers.  
+- Encourage **small, safe, incremental** delivery (≤200 LOC per task).  
+- Follow the **Golden Rule:** *Start small, work incrementally, test continuously.*
 
 ---
 
-## 🧪 Testing Instructions
+## 2️⃣ Development Environment
 
-### Running Tests
-- **All checks for one package:**
+| Tool | Requirement | Notes |
+|------|--------------|-------|
+| **Node.js** | Latest LTS | Required for TypeScript/React packages |
+| **Python** | ≥3.11 | Modern typing, async & performance |
+| **Package Manager** | `pnpm` | Fast, workspace-aware |
+| **Linters/Formatters** | `Ruff` + `Black` (Py) / `ESLint` + `Prettier` (TS) | Mandatory |
+| **Test Runners** | `Pytest`, `Vitest` | Required |
+| **Version Control** | Git (manual only — see §3) | Commit discipline required |
+
+> 🧠 *Why:* Standardised tooling ensures deterministic builds and CI/CD consistency.
+
+---
+
+## 3️⃣ Git & Commit Discipline (Manual Commands Only)
+
+> ⚠️ **Do not sync to Git automatically.**  
+> Tools or scripts must only **print** Git commands; contributors run them manually.
+
+**Rules**
+- No `--amend` or destructive `rebase`.  
+- Only committed code is reviewed — confirm clean state:  
   ```bash
-  pnpm turbo run test --filter <project_name>
+  git status
   ```
-- **From package root:**
-  ```bash
-  pnpm test
+- **Commit message convention:**
   ```
-- **Target a specific test:**
-  ```bash
-  pnpm vitest run -t "<test name>"
+  <type>: <imperative short summary>
+  [extra context]
+  Refs: #<issue>
   ```
+  Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`.
 
-### Requirements
-- All PRs **must** pass:
-  - **Linting:** `pnpm lint --filter <project_name>`
-  - **Type checks:** via TypeScript or `mypy` (if Python is present)
-  - **Unit tests:** green before merge
-- **No merge** is allowed with red tests, lint errors, or type violations.
-
-### Test Design Principles
-- Use the **AAA pattern** (Arrange–Act–Assert).  
-- Mock or fake external calls—**never** rely on live network data.  
-- Keep test data **isolated** and **repeatable**.  
-- Follow coverage target: **≥80%** of changed lines.  
-- Integration tests should confirm system boundaries work (e.g., MQTT, REST, SCADA).  
-- Contract tests must verify message payloads conform to the agreed schema.
-
----
-
-## 🧹 Code Style & Quality Standards
-
-### Python Code (if applicable)
-Follow:
-- **PEP 8** – Style guide
-- **PEP 20** – Zen of Python
-- **PEP 257** – Docstring conventions
-- Type hints for all public functions
-- `dataclasses` or `attrs` for structured data
-- `pathlib`, `logging`, and `contextlib` over legacy alternatives
-- Explicit error handling; no silent exceptions
-
-### Formatting & Linting
-Run before each commit:
+**Example**
 ```bash
-ruff check . --fix
-black .
+git add -A
+git commit -m "feat: add MQTT stoppage summarizer"
+git pull --rebase
+git push
 ```
 
-Recommended `pyproject.toml`:
-```toml
-[tool.black]
-line-length = 120
-target-version = ["py311"]
-
-[tool.ruff]
-line-length = 120
-select = ["E", "F", "I", "B", "UP", "SIM", "PL", "RUF"]
-ignore = ["E203"]
-fix = true
-```
+> 🧩 *Extra Scholar Info:* Linear history accelerates audits and bisect debugging.  
+> Prefer **many small commits** over few large ones.
 
 ---
 
-## 🧩 Pull Request Guidelines
+## 4️⃣ Code Structure & Conventions
 
-### PR Title Format
+```plaintext
+src/          # Core agent logic
+tests/        # Unit, integration, contract, e2e
+docs/         # Design, schemas, testing specs
+scripts/      # Tooling, mocks, fixtures
 ```
-[<project_name>] <short concise title>
-```
 
-### PR Checklist
-Before opening or merging a PR:
-- [ ] Code formatted with **Black**
-- [ ] Lint passes (Ruff/ESLint)
-- [ ] Tests pass (`pnpm test`)
-- [ ] Unit tests added for all new logic
-- [ ] Integration/contract tests added if applicable
-- [ ] Type checks clean (TypeScript or mypy)
-- [ ] README or inline docs updated if behaviour changes
-- [ ] No console.log or print debugging left in production code
+### 4.1 Python & TypeScript
+- Follow **PEP 8/20/257** and TypeScript ESLint rules.
+- Type hints required for all public functions.
+- No `print`; use structured logging.
+- Prefer dependency injection over global state.
+- Errors must be **actionable** (“what failed & how to fix”).
+- Configuration from `.env` (never hardcoded).
 
-### Example CI flow
-1. `pnpm lint`
-2. `pnpm test`
-3. (Optional) `pnpm build`
-4. PR merge only after all checks succeed.
+> 🧩 *Extra Scholar Info:* Explicit types and dependency injection make agents more testable.
 
 ---
 
-## 📄 Best Practices Summary
-- **Keep functions small, pure, and explicit.**  
-- **Fail fast:** raise clear exceptions early.  
-- **Document all public functions.**  
-- **Avoid magic numbers:** use constants or enums.  
-- **Use logging instead of prints.**  
-- **Secure secrets:** never hardcode credentials.  
-- **Include examples** for any public API or library integration.
+## 5️⃣ Testing Philosophy (TDD & Layered Approach)
+
+### 5.1 Testing Layers
+| Layer | Scope | Example |
+|-------|--------|----------|
+| **Unit** | Pure logic | parsing, transforms |
+| **Integration** | Boundaries | MQTT ↔ DB |
+| **Contract** | Schemas | SparkplugB, JSON |
+| **E2E** | Full flow | broker → DB → Canary |
+
+### 5.2 Rules
+- **Write the test first** (TDD).  
+- Mark slow tests for CI isolation.  
+- Use **AAA pattern** (Arrange–Act–Assert).  
+- Mock external calls — no live data.  
+- Target ≥80% coverage of changed lines.
+
+### 5.3 Local Commands
+```bash
+pnpm test
+uv run pytest -q
+ruff check .
+pnpm lint
+```
+
+> 🧩 *Extra Scholar Info:* TDD ensures correctness by defining “expected behaviour” first.  
 
 ---
 
-### TL;DR (pt-PT)
-As novas instruções garantem código limpo e padronizado: segue PEP8/20/257, usa **Ruff** e **Black**, e obriga a **testes unitários**. Testes de integração e contrato são recomendados.  
-Antes de fazer merge, certifica-te que `lint`, `test` e `type checks` passam, e que todo o código está documentado e formatado.
+## 6️⃣ CI/CD Quality Gates
+
+| Gate | Description |
+|-------|-------------|
+| **Lint/Format** | Black, Ruff, ESLint, Prettier |
+| **Tests** | Unit + Integration + Contract |
+| **Coverage** | ≥80% changed lines |
+| **Secrets** | Gitleaks |
+| **Vulnerabilities** | `pip-audit`, `npm audit`, Trivy |
+| **SBOM** | Syft (optional signing: Sigstore) |
+| **Branch Protection** | no force-push; all checks green |
+
+> 🧩 *Extra Scholar Info:* Automating gates enforces discipline even for fast iterations.
+
+---
+
+## 7️⃣ Pull Request Workflow
+
+**Checklist**
+- [ ] ≤300 LOC (excluding tests/docs).  
+- [ ] One logical change only.  
+- [ ] CI green (lint/tests/coverage).  
+- [ ] Docs & changelog updated.  
+- [ ] No `console.log` or `print`.  
+- [ ] Secrets checked and redacted.
+
+**PR Title:**  
+```
+[project_name] <short descriptive title>
+```
+
+**PR Content:** summary, screenshots/logs (if relevant), issue link, checklist.
+
+> 🧩 *Extra Scholar Info:* Small, isolated PRs reduce review fatigue and rollback risk.
+
+---
+
+## 8️⃣ Reliability & Resilience Standards
+
+- **Rate limit:** ≤500 req/s to external APIs.  
+- **Retries:** exponential backoff + jitter.  
+- **Timeouts:** explicit for every call.  
+- **Circuit breaker:** isolate failing services.  
+- **CDC debounce:** 180 s post-transmitter refresh.  
+- **MQTT QoS:** metrics → 1; logs → 0.  
+- **Validation:** enforce schemas before processing.  
+
+> 🧩 *Extra Scholar Info:* Controlled retries prevent overload; schema validation avoids cascading failures.
+
+---
+
+## 9️⃣ Observability & Logging
+
+- **Logs:** JSON structured, daily rotation (≤100 MB, 14 days).  
+- **Metrics (Prometheus):**
+  - Counters: DBIRTH processed, retries, success/fail.  
+  - Histograms: latency p50/p95.  
+  - Gauges: backlog, circuit state.  
+- **Health events:** publish to `Ignition Cloud` or equivalent.  
+- **Tracing:** use OpenTelemetry spans if available.
+
+> 🧩 *Extra Scholar Info:* Observability shortens time-to-diagnose and ensures reproducibility.
+
+---
+
+## 🔒 10️⃣ Security & Secrets
+
+- TLS 1.3 end-to-end (MQTT, DB, REST).  
+- Postgres with `verify-full`.  
+- `.env` files → permissions 600.  
+- No credentials in repo/history.  
+- Secrets via Vault or AWS Secrets Manager.  
+- Mask sensitive data in logs.  
+- Run dependency & secret scans before merge.
+
+> 🧩 *Extra Scholar Info:* A single leaked key can compromise infrastructure—always rotate and restrict scope.
+
+---
+
+## 📚 11️⃣ Documentation Discipline
+
+Each change must update:
+- `README.md` and/or `docs/` → testing steps, environment vars.  
+- `CHANGELOG.md` → user-facing or contract changes.  
+- `MQTT`/`UNS` topic tables if modified.  
+
+> 🧩 *Extra Scholar Info:* Living documentation reduces onboarding time by ~50 %.
+
+---
+
+## 🧩 12️⃣ Monorepo Hygiene
+
+- One repo → many packages; no deep imports.  
+- Public APIs only.  
+- Shared `contracts/types` package (`@org/contracts`, `contracts`).  
+- Turbo builds run only affected packages.
+
+> 🧩 *Extra Scholar Info:* Monorepo discipline keeps dependency graphs predictable and incremental builds fast.
+
+---
+
+## 🧱 13️⃣ Project Refactor Checklist (Solid State)
+
+| Area | Target |
+|-------|--------|
+| **Structure** | Folders: `src/`, `tests/`, `docs/`, `scripts/` |
+| **Ownership** | Assign module maintainers |
+| **Contracts** | Central schemas/types; versioned |
+| **Observability** | Logs + Prometheus + Alerts |
+| **Security** | TLS, Vault, scans |
+| **Quality** | Coverage & lint gates enforced |
+| **PR hygiene** | One logical change per PR |
+| **Smoke testing** | `docker-compose` with EMQX for local runs |
+| **Legacy cleanup** | Remove deprecated integrations |
+
+> 🧩 *Extra Scholar Info:* Continuous small refactors prevent technical debt accumulation.
+
+---
+
+## 🇵🇹 TL;DR (Resumo)
+
+- Ambiente padronizado (Node LTS, Python 3.11, pnpm).  
+- Commits manuais, curtos e claros (sem sync automático).  
+- Código simples, validado nas fronteiras, testado antes de escrever.  
+- CI robusta com *gates* de segurança, cobertura e estilo.  
+- Observabilidade, TLS 1.3, e logs estruturados obrigatórios.  
+- Refactor contínuo → projecto sólido e sustentável.
