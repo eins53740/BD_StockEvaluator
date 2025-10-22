@@ -1074,4 +1074,6 @@ class StockAnalysisService:
             "price_history": analysis.get("price_history", []),
             "technical_chart": technical_chart,
             "macro_snapshot": macro_snapshot,
+            "fx_snapshot_id": analysis.get("fx_snapshot_id"),
+            "fx_snapshot_summary": analysis.get("fx_snapshot_summary") or analysis.get("fx_snapshot"),
         }

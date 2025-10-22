@@ -55,7 +55,9 @@
             transition: background-color 0.3s, color 0.3s;
         }
         .container {
-            max-width: 800px;
+            /* Make the main container responsive: cap at 1200px but fit smaller viewports */
+            max-width: min(1200px, 95vw);
+            width: 95%;
             margin: auto;
             background-color: var(--color-surface);
             padding: 2em;
@@ -286,6 +288,35 @@
             border: 1px solid var(--color-border);
             border-radius: 8px;
             box-shadow: 0 2px 4px var(--color-shadow);
+        }
+
+        /* Utility: on large screens allow sections to stretch wider than the main content */
+        .full-width {
+            /* default: behave like normal block within container (mobile friendly) */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 900px) {
+            .full-width {
+                /* Break out to the full viewport width on larger screens */
+                width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+                padding-left: 2em;
+                padding-right: 2em;
+                box-sizing: border-box;
+            }
+
+            /* When mermaid is full-width, remove the surrounding card visuals for true edge-to-edge display */
+            .mermaid.full-width {
+                background-color: transparent;
+                border: none;
+                box-shadow: none;
+                padding-left: 0.5em;
+                padding-right: 0.5em;
+                margin-bottom: 1.25em;
+            }
         }
 
         .analysis-section h3 {
@@ -615,7 +646,7 @@
             {% endif %}
 
             <h3>Decision Flowchart:</h3>
-            <div class="mermaid">
+            <div class="mermaid full-width">
                 {{ flowchart_definition | safe }}
             </div>
 

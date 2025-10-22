@@ -165,6 +165,68 @@ Tests:
 - Unit test: fx_snapshot creation, retrieval, and id presence in payload.
 - Regression test: converting returns using persisted snapshot equals conversion stored earlier.
 
+---
+
+### Epic 15: LLM Stock Evaluation Query Enhancements
+Goal: Extend the LLM query logic to generate detailed stock assessments covering technical, fundamental, and market sentiment dimensions.
+
+- F15.1 — Implement Technical Analysis Scoring
+- Add functionality for the LLM to assign a score (0–10) for the stock’s technical analysis.
+- Include rationale behind the score (trend, indicators, support/resistance).
+
+- F15.2 — Implement Fundamental Analysis Scoring
+- Provide a score (0–10) for the fundamental health of the company.
+- Include justification referencing revenue, profitability, debt, cash flow, or valuation ratios.
+
+- F15.3 — Company Report Summary Integration
+- Summarise and interpret the latest company financial report to assess risks and virtues.
+
+### Epic 16: Market Sentiment Integration
+Goal: Incorporate real-time and aggregate market sentiment into stock analysis.
+
+- F16.1 — Integrate Real-Time Stock Sentiment
+- Pull real-time sentiment from news, social media, and analyst sources.
+- Include sentiment value (positive/neutral/negative or score 0–10).
+
+- F16.2 — Integrate General Market Sentiment
+- Provide a broader sentiment index for the overall stock market context.
+- Include current market risk appetite (bullish/bearish).
+
+### Epic 17: Investor Preference Scoring
+Goal: Quantify and contextualise investment flow trends — stock vs. safe assets.
+
+- F17.1 — Assess Capital Allocation Trends
+- Add a summarised metric (0–10) showing investor inclination toward risk assets (stocks) versus safe assets (gold, bonds).
+
+- F17.2 — Combine All Metrics into Unified Summary
+- Create a cohesive final wrap-up summarising all notes and scores.
+
+### Epic 18: LLM Prompt Optimisation and Testing
+Goal: Ensure the prompt structure yields consistent, interpretable, and data-backed analysis.
+
+- F18.1 — Optimise LLM Prompt Template
+- Design a structured LLM prompt template that chains all required analyses.
+
+- F18.2 — QA Testing and Output Validation
+- Validate prompt consistency across various companies and market conditions.
+
+### Epic 19: Extended Stock Classification Scoring
+Goal: Add specialised scoring categories for deeper investor-oriented classification.
+
+- F19.1 — Growth Stock Classification
+- Give a score (0–10) to classify the stock as a "growth stock".
+- Justify based on historical revenue growth, innovation pipeline, and market expansion potential.
+
+- F19.2 — Dividend Stock Classification
+- Give a score (0–10) to classify the stock as a "dividend stock".
+- Justify based on dividend yield, payout ratio, and historical dividend stability.
+
+- F19.3 — Investment Risk to Failure Scoring
+- Give a score (0–10) to classify the stock’s investment risk of failure.
+- Justify based on financial resilience, industry competitiveness, and leverage exposure.
+
+---
+
 
 ## Tech Stack Summary
 | Layer          | Technologies                                                   |

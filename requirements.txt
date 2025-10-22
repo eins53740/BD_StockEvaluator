@@ -123,7 +123,7 @@ MarkupSafe==2.1.5
 matplotlib==3.10.7
 matplotlib-inline==0.1.7
 mdurl==0.1.2
-MetaTrader5==5.0.5328
+MetaTrader5==5.0.5328; sys_platform == 'win32'
 ml-dtypes==0.4.1
 monotonic==1.6
 multidict==6.0.5

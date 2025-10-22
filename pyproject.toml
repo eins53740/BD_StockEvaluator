@@ -19,7 +19,7 @@ dependencies = [
     "kaleido>=0.2.1",
     "markdown>=3.9",
     "matplotlib>=3.10.7",
-    "metatrader5>=5.0.5328",
+    "metatrader5>=5.0.5328; sys_platform == 'win32'",
     "nltk>=3.9.2",
     "numpy<2.0",
     "numpy-financial>=1.0.0",

@@ -19,7 +19,14 @@ from typing import (
     Sequence,
 )
 
+try:
+    # Python 3.9+ zoneinfo
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover - fallback
+    ZoneInfo = None
+
 import requests
+import uuid
 import yfinance as yf
 
 from .keys import get_api_key
@@ -280,6 +287,18 @@ class SQLiteDataStore:
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fx_snapshot (
+                id TEXT PRIMARY KEY,
+                as_of TEXT NOT NULL,
+                provider TEXT,
+                rates_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
         self._conn.commit()
 
     def set_precedence(self, precedence: Dict[str, Sequence[str]]) -> None:
@@ -372,6 +391,44 @@ class SQLiteDataStore:
                     json.dumps(payload, default=_json_serializer),
                 ),
             )
+
+    def save_fx_snapshot(self, as_of: datetime, provider: Optional[str], rates: Dict[str, float]) -> str:
+        """Persist FX rates as a snapshot and return the generated id."""
+        fx_id = str(uuid.uuid4())
+        as_of_iso = _to_iso(as_of)
+        created = _to_iso(datetime.now(timezone.utc))
+        rates_json = json.dumps(rates)
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO fx_snapshot (id, as_of, provider, rates_json, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (fx_id, as_of_iso, provider, rates_json, created),
+            )
+        return fx_id
+
+    def load_fx_snapshot(self, fx_id: Optional[str] = None) -> Dict[str, Any]:
+        """Load an fx_snapshot by id or return empty dict if not found."""
+        if not fx_id:
+            return {}
+        row = self._conn.execute(
+            """
+            SELECT id, as_of, provider, rates_json, created_at
+            FROM fx_snapshot
+            WHERE id = ?
+            """,
+            (fx_id,),
+        ).fetchone()
+        if not row:
+            return {}
+        return {
+            "id": row["id"],
+            "as_of": row["as_of"],
+            "provider": row["provider"],
+            "rates": json.loads(row["rates_json"]),
+            "created_at": row["created_at"],
+        }
 
     def persist_history(
         self,
@@ -1491,7 +1548,16 @@ class MultiSourceDataClient:
             ticker, as_of_dt, aggregated, providers_used, converter
         )
 
+        # Persist normalized snapshot (fundamentals/prices) as before
         self.store.persist_snapshot(snapshot)
+
+        # Persist FX snapshot (rates) and obtain fx_snapshot_id for reproducibility
+        try:
+            fx_snapshot_id = self.store.save_fx_snapshot(
+                as_of_dt, providers_used.get("exchange_rates"), converter.rates
+            )
+        except Exception:
+            fx_snapshot_id = None
         if aggregated.get("history"):
             self.store.persist_history(
                 ticker,
@@ -1521,7 +1587,7 @@ class MultiSourceDataClient:
                 as_of_dt,
             )
 
-        return self._build_stock_info(snapshot)
+        return self._build_stock_info(snapshot, fx_snapshot_id=fx_snapshot_id)
 
     def _normalize_snapshot(
         self,
@@ -1656,7 +1722,7 @@ class MultiSourceDataClient:
             fx_rates=converter.rates,
         )
 
-    def _build_stock_info(self, snapshot: NormalizedSnapshot) -> Dict[str, Any]:
+    def _build_stock_info(self, snapshot: NormalizedSnapshot, fx_snapshot_id: Optional[str] = None) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "ticker": snapshot.ticker,
             "currency": snapshot.prices.get("currency", snapshot.currency),
@@ -1679,9 +1745,47 @@ class MultiSourceDataClient:
 
         # Add FX snapshot metadata and timestamps
         info["fx_snapshot"] = snapshot.fx_rates or {}
+        info["fx_snapshot_id"] = fx_snapshot_id
+        # Small human-readable summary: top 5 currencies by code
+        if snapshot.fx_rates:
+            try:
+                top_items = sorted(snapshot.fx_rates.items(), key=lambda kv: kv[0])[:5]
+                info["fx_snapshot_summary"] = {k: v for k, v in top_items}
+            except Exception:
+                info["fx_snapshot_summary"] = {}
         info["asof_utc"] = snapshot.as_of.isoformat().replace("+00:00", "Z")
-        # For now, we mirror asof_utc for exchange tz; production may convert to exchange local tz
-        info["asof_exchange_tz"] = info["asof_utc"]
+        # Compute asof_exchange_tz using a simple exchange->timezone mapping when possible.
+        exchange_tz_map = {
+            "NYSE": "America/New_York",
+            "NASDAQ": "America/New_York",
+            "AMEX": "America/New_York",
+            "TSX": "America/Toronto",
+            "LSE": "Europe/London",
+            "XETRA": "Europe/Berlin",
+            "FWB": "Europe/Berlin",
+            "SSE": "Asia/Shanghai",
+            "SZSE": "Asia/Shanghai",
+            "HKEX": "Asia/Hong_Kong",
+            "JPX": "Asia/Tokyo",
+            "BSE": "Asia/Kolkata",
+        }
+
+        asof_utc_dt = snapshot.as_of
+        tz_name = None
+        try:
+            if snapshot.exchange and isinstance(snapshot.exchange, str):
+                tz_name = exchange_tz_map.get(snapshot.exchange.upper())
+        except Exception:
+            tz_name = None
+
+        if tz_name and ZoneInfo is not None:
+            try:
+                local_dt = asof_utc_dt.astimezone(ZoneInfo(tz_name))
+                info["asof_exchange_tz"] = local_dt.isoformat()
+            except Exception:
+                info["asof_exchange_tz"] = info["asof_utc"]
+        else:
+            info["asof_exchange_tz"] = info["asof_utc"]
 
         # Determine if any category used a fallback provider (not the top-precedence provider)
         fallback = False
