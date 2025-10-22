@@ -102,6 +102,42 @@ _Status: Completed in BD_Finance_py_v2 (advanced analytics surfaced in the Flask
 
 ---
 
+### Epic 21 - TLS/HTTPS Security Implementation
+**Goal:** Implement end-to-end encryption with wildcard certificate support.
+
+- F21.1 TLS Configuration
+  - Generate and configure wildcard certificate (*.stockevaluator.local)
+  - Set up TLS 1.3 with strong cipher suites
+  - Implement HSTS (HTTP Strict Transport Security)
+  - Configure secure cookie attributes (Secure, HttpOnly, SameSite)
+
+- F21.2 Certificate Management
+  - Implement automated certificate renewal process
+  - Set up monitoring for certificate expiration
+  - Create secure backup system for certificates and private keys
+  - Document certificate rotation procedures
+
+- F21.3 Security Headers & Hardening
+  - Configure security headers (CSP, X-Frame-Options, etc.)
+  - Set up CORS policies for API endpoints
+  - Implement rate limiting for API routes
+  - Enable TLS session resumption for performance
+
+- F21.4 Infrastructure Integration
+  - Update Docker configurations for TLS support
+  - Configure reverse proxy (nginx) with TLS termination
+  - Set up health checks over HTTPS
+  - Document SSL/TLS verification procedures
+
+**Success Criteria:**
+- All HTTP traffic redirected to HTTPS
+- A+ rating on SSL Labs server test
+- Automated certificate renewal process in place
+- Complete documentation for certificate management
+- No service disruption during certificate rotation
+
+---
+
 ### Epic 12 - Market Regime Signals & Portfolio Tilt (Priority: 1)
 _Goal:_ Automatically identify market regimes and provide portfolio tilt and rebalancing suggestions to reduce downside risk and capitalise on regime-driven opportunities.
 
