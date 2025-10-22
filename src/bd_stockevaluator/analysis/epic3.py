@@ -594,22 +594,25 @@ class Epic3TechnicalAnalyzer:
             self._cache["performance"] = metrics
             return metrics
 
-        cumulative = (1 + returns).cumprod()
-        running_max = cumulative.cummax()
-        drawdowns = cumulative / running_max - 1
-        max_drawdown = float(drawdowns.min())
+        with np.errstate(invalid="ignore"):
+            cumulative = (1 + returns).cumprod()
+            running_max = cumulative.cummax()
+            drawdowns = cumulative / running_max - 1
+            max_drawdown = float(drawdowns.min())
 
-        avg_daily_return = returns.mean()
-        volatility = returns.std(ddof=0) * math.sqrt(TRADING_DAYS_PER_YEAR)
+            avg_daily_return = returns.mean()
+            volatility = returns.std(ddof=0) * math.sqrt(TRADING_DAYS_PER_YEAR)
 
-        annual_return = (1 + avg_daily_return) ** TRADING_DAYS_PER_YEAR - 1
-        excess_return = avg_daily_return - risk_free_rate / TRADING_DAYS_PER_YEAR
-        sharpe = (
-            (excess_return / returns.std(ddof=0)) * math.sqrt(TRADING_DAYS_PER_YEAR)
-            if returns.std(ddof=0) > 0
-            else 0.0
-        )
-        calmar = annual_return / abs(max_drawdown) if max_drawdown < 0 else float("inf")
+            annual_return = (1 + avg_daily_return) ** TRADING_DAYS_PER_YEAR - 1
+            excess_return = avg_daily_return - risk_free_rate / TRADING_DAYS_PER_YEAR
+            sharpe = (
+                (excess_return / returns.std(ddof=0)) * math.sqrt(TRADING_DAYS_PER_YEAR)
+                if returns.std(ddof=0) > 0
+                else 0.0
+            )
+            calmar = (
+                annual_return / abs(max_drawdown) if max_drawdown < 0 else float("inf")
+            )
 
         metrics = {
             "risk_free_rate": risk_free_rate,

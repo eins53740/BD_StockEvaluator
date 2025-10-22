@@ -319,6 +319,39 @@
             }
         }
 
+        /* Respect user preference override: force full-bleed layout regardless of viewport */
+        body.wide-mode .full-width {
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding-left: 2em;
+            padding-right: 2em;
+            box-sizing: border-box;
+        }
+        body.wide-mode .mermaid.full-width {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Wide-toggle button styles */
+        .wide-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            background-color: var(--color-surface);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .wide-toggle:hover { background-color: rgba(0,0,0,0.03); }
+        .wide-toggle:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        .wide-toggle.active { background-color: var(--color-primary); color: white; border-color: var(--color-primary); }
+
         .analysis-section h3 {
             margin-top: 0;
             color: var(--color-text-primary);
@@ -631,6 +664,12 @@
         <form method="post" class="form-group">
             <input type="text" name="ticker" placeholder="e.g., MSFT" value="{{ ticker or '' }}" required>
             <button type="submit">Evaluate</button>
+            <button type="button" id="wide-toggle" class="wide-toggle" title="Toggle wide layout" aria-pressed="false" aria-label="Toggle wide layout" style="margin-left:0.5em;">
+                <!-- SVG expand icon -->
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M3 3h8v2H5v6H3V3zm18 0v8h-2V5h-6V3h8zM3 21v-8h2v6h6v2H3zm18 0h-8v-2h6v-6h2v8z" fill="currentColor" />
+                </svg>
+            </button>
         </form>
 
         <div id="loading-spinner" class="loader"></div>
@@ -1071,7 +1110,7 @@
                 </div>
 
                 {% if technical_analysis.chart and technical_analysis.chart.png %}
-                <div class="technical-chart">
+                <div class="technical-chart full-width">
                     <img src="{{ technical_analysis.chart.png_url or url_for('static', filename=technical_analysis.chart.png) }}" alt="Technical chart for {{ ticker or company_name }}">
                 </div>
                 {% endif %}
@@ -1127,7 +1166,7 @@
                 </table>
                 {% endif %}
 
-                <div class="macro-highlights">
+                <div class="macro-highlights full-width">
                     {% if macro_context.recession_signals %}
                     <div class="macro-card">
                         <h4>Recession Signals</h4>
@@ -1242,7 +1281,7 @@
                 <h3>🏛 Ownership Trends</h3>
                 {% set inst = ownership_trends.get('institutional') or {} %}
                 {% set ins = ownership_trends.get('insider') or {} %}
-                <div class="macro-highlights">
+                <div class="macro-highlights full-width">
                     <div class="macro-card">
                         <h4>Institutional Ownership</h4>
                         <p><strong>Latest:</strong> {{ inst.get('latest', 'n/a') }}{% if inst.get('latest') is not none %}%{% endif %}</p>
@@ -1341,7 +1380,7 @@
             {% endif %}
 
             {% if opinion_report %}
-            <div class="opinion-report">
+            <div class="opinion-report full-width">
                 <h3>🤖 AI-Generated Opinion Report</h3>
                 {{ opinion_report | safe }}
             </div>
@@ -1357,6 +1396,29 @@
 
     <script src="{{ url_for('static', filename='flowchart.js') }}"></script>
     <script>
+        // --- Layout toggle: store user preference in localStorage ---
+        const wideToggle = document.getElementById('wide-toggle');
+        function applyWideMode(enabled){
+            document.body.classList.toggle('wide-mode', enabled);
+            if(wideToggle) wideToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            localStorage.setItem('bd_wide_mode', enabled ? '1' : '0');
+        }
+        (function(){
+            try{
+                const pref = localStorage.getItem('bd_wide_mode');
+                applyWideMode(pref === '1');
+            }catch(e){}
+            if(wideToggle){
+                wideToggle.addEventListener('click', () => {
+                    const enabled = document.body.classList.toggle('wide-mode');
+                    applyWideMode(enabled);
+                });
+            }
+        })();
+
+        // When wide-mode is set, make full-width sections expand regardless of screen size
+        // This is controlled by CSS `.wide-mode .full-width` rules added in the stylesheet.
+
         // --- JavaScript to control the loading spinner ---
         const form = document.querySelector('form');
         const button = form.querySelector('button');
@@ -1368,6 +1430,71 @@
             button.disabled = true;
             button.textContent = 'Evaluating...';
         });
+    </script>
+    <!-- One-time onboarding toast for wide-mode -->
+    <div id="wide-toast" role="status" aria-live="polite" style="display:none;">
+        <div class="toast-inner">
+            <strong>Wide mode enabled</strong>
+            <p>Wide mode expands charts and dashboards for a more immersive view. You can toggle it anytime with the icon next to Evaluate.</p>
+            <button id="wide-toast-dismiss" aria-label="Dismiss">Got it</button>
+        </div>
+    </div>
+
+    <style>
+        #wide-toast {
+            position: fixed;
+            right: 1rem;
+            bottom: 1.25rem;
+            z-index: 9999;
+        }
+        #wide-toast .toast-inner {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 1em 1.25em;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            max-width: 340px;
+            color: var(--color-text-primary);
+        }
+        #wide-toast p { margin: 0.4em 0 0.6em; color: var(--color-text-secondary); font-size: 0.95em; }
+        #wide-toast button { background: var(--color-primary); color: white; border: none; padding: 0.45em 0.8em; border-radius: 6px; cursor: pointer; }
+    </style>
+
+    <script>
+        // Show onboarding toast the first time user enables wide mode
+        (function(){
+            const toast = document.getElementById('wide-toast');
+            const dismiss = document.getElementById('wide-toast-dismiss');
+            function showToastOnce(){
+                try{
+                    const shown = localStorage.getItem('bd_wide_hint_shown');
+                    const enabled = localStorage.getItem('bd_wide_mode') === '1';
+                    if(enabled && !shown && toast){
+                        toast.style.display = 'block';
+                    }
+                }catch(e){}
+            }
+            if(dismiss){
+                dismiss.addEventListener('click', ()=>{
+                    try{ localStorage.setItem('bd_wide_hint_shown', '1'); }catch(e){}
+                    if(toast) toast.style.display = 'none';
+                });
+            }
+
+            // Observe changes to bd_wide_mode so we can show toast immediately after toggle
+            const originalSetItem = localStorage.setItem;
+            try{
+                localStorage.setItem = function(key, value){
+                    originalSetItem.apply(this, arguments);
+                    if(key === 'bd_wide_mode'){
+                        showToastOnce();
+                    }
+                };
+            }catch(e){}
+
+            // Initial check
+            setTimeout(showToastOnce, 250);
+        })();
     </script>
 </body>
 </html>

@@ -392,7 +392,9 @@ class SQLiteDataStore:
                 ),
             )
 
-    def save_fx_snapshot(self, as_of: datetime, provider: Optional[str], rates: Dict[str, float]) -> str:
+    def save_fx_snapshot(
+        self, as_of: datetime, provider: Optional[str], rates: Dict[str, float]
+    ) -> str:
         """Persist FX rates as a snapshot and return the generated id."""
         fx_id = str(uuid.uuid4())
         as_of_iso = _to_iso(as_of)
@@ -1722,7 +1724,9 @@ class MultiSourceDataClient:
             fx_rates=converter.rates,
         )
 
-    def _build_stock_info(self, snapshot: NormalizedSnapshot, fx_snapshot_id: Optional[str] = None) -> Dict[str, Any]:
+    def _build_stock_info(
+        self, snapshot: NormalizedSnapshot, fx_snapshot_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "ticker": snapshot.ticker,
             "currency": snapshot.prices.get("currency", snapshot.currency),

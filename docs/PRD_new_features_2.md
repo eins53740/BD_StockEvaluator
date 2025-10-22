@@ -227,6 +227,62 @@ Goal: Add specialised scoring categories for deeper investor-oriented classifica
 
 ---
 
+### EPIC 20: Productionise Flask App on Windows 11 using Waitress + Reverse Proxy
+
+- Goal:
+    Deploy the Flask app in a stable, secure, and performant production environment on Windows 11 using Waitress (WSGI) and a reverse proxy (IIS or Nginx), with logging, monitoring, and automatic startup as a Windows service.
+
+Tasks:
+ - F20.1 - Create wsgi.py exposing app (remove app.run). Add /healthz endpoint returning HTTP 200.
+
+ - F20.2 - Set environment variables:
+    setx FLASK_ENV "production"
+    setx SECRET_KEY "your_secret_key"
+    Ensure debug=False in production.
+
+ - F20.3 - Install and configure Waitress:
+    pip install waitress
+    Test: waitress-serve --port=8000 wsgi:app
+    Adjust threads (8–16) and timeout.
+
+ - F20.4 - Create Windows Service with NSSM:
+    nssm install FlaskApp "C:\Path\to\python.exe" "-m" "waitress" "--port=8000" "wsgi:app"
+    Enable auto-restart and configure logging.
+
+ - F20.5 - Configure reverse proxy:
+    Option A - IIS: install URL Rewrite + ARR, proxy HTTPS → http://localhost:8000
+    Option B - Nginx: proxy_pass to 127.0.0.1:8000, serve /static/, enable gzip.
+
+ - F20.6 - Configure TLS and security headers (HSTS, X-Frame-Options, Referrer-Policy).
+
+ - F20.7 - Configure logging and rotation (Waitress logs + proxy logs).
+
+ - F20.8 - Test and monitor:
+    Check curl/browser access
+    Verify /healthz returns 200
+    Run basic load test
+    Enable scheduled health checks
+
+- Tests:
+    python -c "import wsgi; wsgi.app" runs without errors
+    waitress-serve responds on localhost:8000
+    Proxy forwards HTTPS correctly
+    /healthz returns 200 OK
+    Windows Service auto-starts on reboot
+    Logs available for last 24h
+    Static files load via proxy
+    SSL Labs grade A- or higher
+    Load test stable (no 5xx errors)
+
+- Success Metrics:
+    Uptime > 99.5%
+    HTTPS enforced, debug mode disabled
+    P95 response time within performance target
+    Automatic restart on crash verified
+    Logs and health checks functional
+
+---
+
 
 ## Tech Stack Summary
 | Layer          | Technologies                                                   |
