@@ -30,6 +30,7 @@ BD Finance Stock Evaluator delivers an end-to-end investing assistant that blend
 - API keys for providers (store in `.env` or `config/api_keys.txt`).
 
 ### 2. Backend Setup
+#### Option 1: Development Setup
 ```bash
 python -m venv .venv
 . .venv/Scripts/activate  # PowerShell on Windows
@@ -37,22 +38,72 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Launch the API (all platforms can share it):
+#### Option 2: Package Installation
 ```bash
+python -m venv .venv
+. .venv/Scripts/activate  # PowerShell on Windows
+pip install --upgrade pip
+pip install .  # Install as a package
+```
+
+To run the evaluator:
+```bash
+python -m bd_stockevaluator  # Run as a module
+```
+
+For Windows 11, follow these steps in order:
+
+1. First, setup Python virtual environment (in PowerShell):
+```powershell
+# Create and activate virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install --upgrade pip
+pip install .
+```
+
+2. Start the FastAPI server (keep this running in a PowerShell window):
+```powershell
+cd src
 uvicorn bd_stockevaluator.api.main:app --host 0.0.0.0 --port 8000
 ```
-Health check: `http://localhost:8000/health`
 
-To view the legacy Flask UI:
-```bash
-python src/bd_stockevaluator/app.py
-# visit http://localhost:5000
+3. Open a new PowerShell window and start Streamlit (keep this running):
+```powershell
+# Make sure your virtual environment is activated
+.\.venv\Scripts\Activate.ps1
+
+# Run Streamlit (from the root directory)
+cd D:\GitHub\BD_StockEvaluator  # Change to your actual path
+python -m streamlit run src/bd_stockevaluator/desktop/overview.py
 ```
+
+4. (Optional) For the legacy web interface, open another PowerShell window:
+```powershell
+# Make sure your virtual environment is activated
+.\.venv\Scripts\Activate.ps1
+
+python src/bd_stockevaluator/app.py
+```
+
+You can then access:
+- Modern Streamlit UI: `http://localhost:8501`
+- FastAPI endpoints: `http://localhost:8000`
+- Legacy Flask UI: `http://localhost:5000`
 
 ### 3. Streamlit Desktop Overview
+If installed as a package (Option 2):
 ```bash
-streamlit run -m bd_stockevaluator.desktop.overview
+python -m streamlit run -m bd_stockevaluator.desktop.overview
 ```
+
+If using development setup (Option 1):
+```bash
+PYTHONPATH=src streamlit run src/bd_stockevaluator/desktop/overview.py
+```
+
 The app provides fundamentals, technicals, macro context, Chart Explorer, and downloadable reports for any ticker list.
 
 ### 4. Android Client

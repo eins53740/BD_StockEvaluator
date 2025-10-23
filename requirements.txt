@@ -13,8 +13,8 @@ atomicwrites==1.4.0
 attrs==23.2.0
 backoff==2.2.1
 backports.weakref==1.0.post1
--e git+https://github.com/eins53740/BD_Python_AI.git@cf9ea4e9d6b0994a9c19affc8d324e187ed3f6c2#egg=bd_python_ai
-bd_stockevaluator @ file:///C:/Users/bfsd/Documents/GitHub/BD_StockEvaluator
+#-e git+https://github.com/eins53740/BD_Python_AI.git@cf9ea4e9d6b0994a9c19affc8d324e187ed3f6c2#egg=bd_python_ai
+#bd_stockevaluator @ file:///C:/Users/bfsd/Documents/GitHub/BD_StockEvaluator
 beautifulsoup4==4.14.2
 black==25.9.0
 blinker==1.9.0
@@ -134,34 +134,11 @@ namex==0.0.8
 narwhals==2.8.0
 nest-asyncio==1.6.0
 nltk==3.9.2
-numpy==1.26.4
-numpy-financial==1.0.0
-oandapyV20==0.7.2
-openai==2.5.0
-openbb-benzinga==1.1.2
-openbb-commodity==1.0.0
-openbb-core==1.1.2
-openbb-crypto==1.1.2
-openbb-currency==1.1.2
-openbb-derivatives==1.1.2
-openbb-economy==1.1.2
-openbb-equity==1.1.2
-openbb-federal-reserve==1.1.2
-openbb-fixedincome==1.1.2
-openbb-fmp==1.1.2
-openbb-fred==1.1.2
-openbb-index==1.1.2
-openbb-intrinio==1.1.2
-openbb-news==1.1.2
-openbb-oecd==1.1.2
-openbb-polygon==1.1.2
-openbb-tiingo==1.1.2
-openbb-tradingeconomics==1.1.2
-openbb-yfinance==1.1.2
-openpyxl==3.1.5
-opt-einsum==3.3.0
-optree==0.12.1
-orjson==3.11.3
+numpy>=2.3.4
+numpy-financial>=1.0.0
+oandapyv20>=0.7.2
+openai>=2.3.0
+openpyxl>=3.1.5
 packaging==23.2
 pandas==2.3.3
 pandas-datareader==0.10.0
