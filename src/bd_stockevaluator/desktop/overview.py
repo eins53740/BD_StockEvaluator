@@ -55,7 +55,7 @@ except Exception:  # pragma: no cover - fallback for direct script execution
         collect_dashboard_snapshot,
     )
     from ..ux.chart_explorer import collect_chart_explorer_payload
-    
+
 
 DEFAULT_TICKERS = ("AAPL", "MSFT", "GOOGL")
 

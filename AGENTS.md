@@ -1,17 +1,17 @@
 # 🧭 Codex Agents — Universal Development & Contribution Guide
 
-> **Audience:** all contributors (human or agent).  
-> **Scope:** entire repository and subdirectories.  
-> **Priority:** deepest `AGENTS.md` file prevails if multiple exist.  
+> **Audience:** all contributors (human or agent).
+> **Scope:** entire repository and subdirectories.
+> **Priority:** deepest `AGENTS.md` file prevails if multiple exist.
 > **Last Updated:** 2025-10-21
 
 ---
 
 ## 1️⃣ Purpose & Principles
 
-- Guarantee **consistency, testability, and maintainability** of all Codex Agents.  
-- Educate contributors: every section ends with an **Extra Scholar Info** note for junior developers.  
-- Encourage **small, safe, incremental** delivery (≤200 LOC per task).  
+- Guarantee **consistency, testability, and maintainability** of all Codex Agents.
+- Educate contributors: every section ends with an **Extra Scholar Info** note for junior developers.
+- Encourage **small, safe, incremental** delivery (≤200 LOC per task).
 - Follow the **Golden Rule:** *Start small, work incrementally, test continuously.*
 
 ---
@@ -33,12 +33,12 @@
 
 ## 3️⃣ Git & Commit Discipline (Manual Commands Only)
 
-> ⚠️ **Do not sync to Git automatically.**  
+> ⚠️ **Do not sync to Git automatically.**
 > Tools or scripts must only **print** Git commands; contributors run them manually.
 
 **Rules**
-- No `--amend` or destructive `rebase`.  
-- Only committed code is reviewed — confirm clean state:  
+- No `--amend` or destructive `rebase`.
+- Only committed code is reviewed — confirm clean state:
   ```bash
   git status
   ```
@@ -58,7 +58,7 @@ git pull --rebase
 git push
 ```
 
-> 🧩 *Extra Scholar Info:* Linear history accelerates audits and bisect debugging.  
+> 🧩 *Extra Scholar Info:* Linear history accelerates audits and bisect debugging.
 > Prefer **many small commits** over few large ones.
 
 ---
@@ -95,10 +95,10 @@ scripts/      # Tooling, mocks, fixtures
 | **E2E** | Full flow | broker → DB → Canary |
 
 ### 5.2 Rules
-- **Write the test first** (TDD).  
-- Mark slow tests for CI isolation.  
-- Use **AAA pattern** (Arrange–Act–Assert).  
-- Mock external calls — no live data.  
+- **Write the test first** (TDD).
+- Mark slow tests for CI isolation.
+- Use **AAA pattern** (Arrange–Act–Assert).
+- Mock external calls — no live data.
 - Target ≥80% coverage of changed lines.
 
 ### 5.3 Local Commands
@@ -109,7 +109,7 @@ ruff check .
 pnpm lint
 ```
 
-> 🧩 *Extra Scholar Info:* TDD ensures correctness by defining “expected behaviour” first.  
+> 🧩 *Extra Scholar Info:* TDD ensures correctness by defining “expected behaviour” first.
 
 ---
 
@@ -132,14 +132,14 @@ pnpm lint
 ## 7️⃣ Pull Request Workflow
 
 **Checklist**
-- [ ] ≤300 LOC (excluding tests/docs).  
-- [ ] One logical change only.  
-- [ ] CI green (lint/tests/coverage).  
-- [ ] Docs & changelog updated.  
-- [ ] No `console.log` or `print`.  
+- [ ] ≤300 LOC (excluding tests/docs).
+- [ ] One logical change only.
+- [ ] CI green (lint/tests/coverage).
+- [ ] Docs & changelog updated.
+- [ ] No `console.log` or `print`.
 - [ ] Secrets checked and redacted.
 
-**PR Title:**  
+**PR Title:**
 ```
 [project_name] <short descriptive title>
 ```
@@ -152,13 +152,13 @@ pnpm lint
 
 ## 8️⃣ Reliability & Resilience Standards
 
-- **Rate limit:** ≤500 req/s to external APIs.  
-- **Retries:** exponential backoff + jitter.  
-- **Timeouts:** explicit for every call.  
-- **Circuit breaker:** isolate failing services.  
-- **CDC debounce:** 180 s post-transmitter refresh.  
-- **MQTT QoS:** metrics → 1; logs → 0.  
-- **Validation:** enforce schemas before processing.  
+- **Rate limit:** ≤500 req/s to external APIs.
+- **Retries:** exponential backoff + jitter.
+- **Timeouts:** explicit for every call.
+- **Circuit breaker:** isolate failing services.
+- **CDC debounce:** 180 s post-transmitter refresh.
+- **MQTT QoS:** metrics → 1; logs → 0.
+- **Validation:** enforce schemas before processing.
 
 > 🧩 *Extra Scholar Info:* Controlled retries prevent overload; schema validation avoids cascading failures.
 
@@ -166,12 +166,12 @@ pnpm lint
 
 ## 9️⃣ Observability & Logging
 
-- **Logs:** JSON structured, daily rotation (≤100 MB, 14 days).  
+- **Logs:** JSON structured, daily rotation (≤100 MB, 14 days).
 - **Metrics (Prometheus):**
-  - Counters: DBIRTH processed, retries, success/fail.  
-  - Histograms: latency p50/p95.  
-  - Gauges: backlog, circuit state.  
-- **Health events:** publish to `Ignition Cloud` or equivalent.  
+  - Counters: DBIRTH processed, retries, success/fail.
+  - Histograms: latency p50/p95.
+  - Gauges: backlog, circuit state.
+- **Health events:** publish to `Ignition Cloud` or equivalent.
 - **Tracing:** use OpenTelemetry spans if available.
 
 > 🧩 *Extra Scholar Info:* Observability shortens time-to-diagnose and ensures reproducibility.
@@ -180,12 +180,12 @@ pnpm lint
 
 ## 🔒 10️⃣ Security & Secrets
 
-- TLS 1.3 end-to-end (MQTT, DB, REST).  
-- Postgres with `verify-full`.  
-- `.env` files → permissions 600.  
-- No credentials in repo/history.  
-- Secrets via Vault or AWS Secrets Manager.  
-- Mask sensitive data in logs.  
+- TLS 1.3 end-to-end (MQTT, DB, REST).
+- Postgres with `verify-full`.
+- `.env` files → permissions 600.
+- No credentials in repo/history.
+- Secrets via Vault or AWS Secrets Manager.
+- Mask sensitive data in logs.
 - Run dependency & secret scans before merge.
 
 > 🧩 *Extra Scholar Info:* A single leaked key can compromise infrastructure—always rotate and restrict scope.
@@ -195,9 +195,9 @@ pnpm lint
 ## 📚 11️⃣ Documentation Discipline
 
 Each change must update:
-- `README.md` and/or `docs/` → testing steps, environment vars.  
-- `CHANGELOG.md` → user-facing or contract changes.  
-- `MQTT`/`UNS` topic tables if modified.  
+- `README.md` and/or `docs/` → testing steps, environment vars.
+- `CHANGELOG.md` → user-facing or contract changes.
+- `MQTT`/`UNS` topic tables if modified.
 
 > 🧩 *Extra Scholar Info:* Living documentation reduces onboarding time by ~50 %.
 
@@ -205,9 +205,9 @@ Each change must update:
 
 ## 🧩 12️⃣ Monorepo Hygiene
 
-- One repo → many packages; no deep imports.  
-- Public APIs only.  
-- Shared `contracts/types` package (`@org/contracts`, `contracts`).  
+- One repo → many packages; no deep imports.
+- Public APIs only.
+- Shared `contracts/types` package (`@org/contracts`, `contracts`).
 - Turbo builds run only affected packages.
 
 > 🧩 *Extra Scholar Info:* Monorepo discipline keeps dependency graphs predictable and incremental builds fast.
@@ -234,9 +234,9 @@ Each change must update:
 
 ## 🇵🇹 TL;DR (Resumo)
 
-- Ambiente padronizado (Node LTS, Python 3.11, pnpm).  
-- Commits manuais, curtos e claros (sem sync automático).  
-- Código simples, validado nas fronteiras, testado antes de escrever.  
-- CI robusta com *gates* de segurança, cobertura e estilo.  
-- Observabilidade, TLS 1.3, e logs estruturados obrigatórios.  
+- Ambiente padronizado (Node LTS, Python 3.11, pnpm).
+- Commits manuais, curtos e claros (sem sync automático).
+- Código simples, validado nas fronteiras, testado antes de escrever.
+- CI robusta com *gates* de segurança, cobertura e estilo.
+- Observabilidade, TLS 1.3, e logs estruturados obrigatórios.
 - Refactor contínuo → projecto sólido e sustentável.

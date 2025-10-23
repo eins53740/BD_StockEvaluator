@@ -56,4 +56,3 @@ Troubleshooting
 
 - If you see "could not read Username for 'https://github.com'" during pip install, confirm `GITHUB_TOKEN` is exported in the shell you use to run `docker compose build`.
 - If the build step takes long, it may be downloading many packages or building wheels; consider using a faster network or prebuilding wheels.
-
