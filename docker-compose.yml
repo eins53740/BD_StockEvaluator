@@ -13,6 +13,7 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       SECRET_KEY: ${SECRET_KEY:-change-me}
+      DOCKER_RUNTIME: ${DOCKER_RUNTIME:-mock}
     restart: unless-stopped
   test:
     build:
@@ -25,6 +26,7 @@ services:
     command: /bin/sh -lc "pip install --upgrade pip && pip install -r requirements.test.txt && pytest -q"
     environment:
       SECRET_KEY: ${SECRET_KEY:-change-me}
+      DOCKER_RUNTIME: mock
     volumes:
       - ./:/app:cached
     tty: false
