@@ -113,18 +113,25 @@ The app provides fundamentals, technicals, macro context, Chart Explorer, and do
 4. Build & run: `./gradlew assembleDebug` then install the APK.
 
 ### 5. Docker Deployment
-Build a minimal runtime image (installs only `requirements.docker.txt`):
+The multi-stage Dockerfile ships with a hardened runtime (non-root user, curl-based healthcheck, minimal dependencies) that boots the API through `python -m app`.
+
+Build the lightweight image:
 ```bash
 docker build -t bd-finance:runtime .
-docker run -p 8000:8000 bd-finance:runtime
+docker run --rm -p 8000:8000 bd-finance:runtime
 ```
-Use the full dependency set:
+
+To include the broader dependency set used on laptops/desktops, set `FULL_REQUIREMENTS=1`:
 ```bash
 docker build -t bd-finance:full --build-arg FULL_REQUIREMENTS=1 .
 ```
-Add `GITHUB_TOKEN` when needed so pip can access private repos. Health endpoint: `GET /health`.
 
-Optional `docker-compose.yml` (if present) provides one-command bring-up with `docker compose up`.
+The container exposes `GET /health`; Docker's healthcheck polls it automatically. At runtime the app honours:
+- `APP_HOST`, `APP_PORT`, `APP_WORKERS` – override the Uvicorn binding.
+- `DOCKER_RUNTIME` – `mock` (default) or `real`, selecting the Docker client returned by `bd_stockevaluator.container.runtime.get_docker_client()`.
+- `DOCKER_AVAILABLE=1` – enables opt-in tests that exercise a real Docker engine.
+
+`docker-compose.yml` provides one-command bring-up (FastAPI API on `8000`, test service installs dev deps and runs `pytest`).
 
 ## Portfolio Automation & Reporting
 - **Daily Report (`src/bd_stockevaluator/reports/daily_report.py`)** – Generates market snapshots, holdings summaries, automated emails, and portfolio PDFs.
