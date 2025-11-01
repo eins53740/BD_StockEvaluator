@@ -93,4 +93,3 @@
 - **AI provider availability** – Implement provider prioritisation (Groq primary, Gemini fallback) and graceful degradation message.
 - **Flowchart rendering performance** – Pre-render HTML on backend, lazy load within Compose to keep frames smooth.
 - **Key exposure** – All API keys remain server-side; device tokens only identify installations.
-

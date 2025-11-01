@@ -55,14 +55,14 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') {
         return;
     }
-    
+
     // Skip external API calls (let them fail gracefully)
-    if (event.request.url.includes('yfinance') || 
+    if (event.request.url.includes('yfinance') ||
         event.request.url.includes('googleapis') ||
         event.request.url.includes('generativeai')) {
         return;
     }
-    
+
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
@@ -71,7 +71,7 @@ self.addEventListener('fetch', event => {
                     console.log('Service Worker: Serving from cache', event.request.url);
                     return cachedResponse;
                 }
-                
+
                 // Otherwise fetch from network
                 return fetch(event.request)
                     .then(response => {
@@ -79,25 +79,25 @@ self.addEventListener('fetch', event => {
                         if (!response || response.status !== 200 || response.type !== 'basic') {
                             return response;
                         }
-                        
+
                         // Clone the response for caching
                         const responseToCache = response.clone();
-                        
+
                         caches.open(CACHE_NAME)
                             .then(cache => {
                                 cache.put(event.request, responseToCache);
                             });
-                        
+
                         return response;
                     })
                     .catch(error => {
                         console.log('Service Worker: Network request failed', error);
-                        
+
                         // Return offline page for navigation requests
                         if (event.request.destination === 'document') {
                             return caches.match('/offline.html');
                         }
-                        
+
                         throw error;
                     });
             })
@@ -144,7 +144,7 @@ self.addEventListener('push', event => {
                 }
             ]
         };
-        
+
         event.waitUntil(
             self.registration.showNotification(data.title, options)
         );

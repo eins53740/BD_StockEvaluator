@@ -69,4 +69,3 @@ The current Windows-hosted Flask app is optimised for desktop browsing. Android 
 - Should AI opinion generation run client-side via cloud API, or proxied through backend to hide keys?
 - Do we ship as a fully native Kotlin app, Flutter app, or hybrid wrapper around enhanced PWA? (Decision captured in solution design.)
 - How do we guarantee data compliance across jurisdictions (e.g., EU/UK financial advice disclaimers)?
-

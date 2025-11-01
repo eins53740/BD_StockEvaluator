@@ -35,4 +35,3 @@
 ## Deployment Notes
 - Backend: push Docker image to AWS ECR via GitHub Actions; deploy on ECS Fargate.
 - Android: configure signing + `./gradlew assembleRelease` for Play Store builds.
-

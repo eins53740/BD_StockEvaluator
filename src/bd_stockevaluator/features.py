@@ -3,6 +3,7 @@
 # 20251507 BDLRA
 
 import yfinance as yf
+import numpy as np
 from typing import Dict, List, Optional
 
 
@@ -326,7 +327,7 @@ class StockAnalysisFeatures:
 
         return {
             "return": (end_price - start_price) / start_price,
-            "volatility": hist_data["Close"].pct_change().std(),
+            "volatility": np.nanstd(hist_data["Close"].pct_change()),
             "max_drawdown": (low_price - high_price) / high_price,
             "trend_direction": "up" if end_price > start_price else "down",
         }
@@ -449,10 +450,14 @@ class StockAnalysisFeatures:
             return {"growth_rate": None, "consistency": "Insufficient Data"}
 
         growth_rates = annual_dividends.pct_change().dropna()
+        if growth_rates.empty:
+            return {"growth_rate": None, "consistency": "Insufficient Data"}
         avg_growth = growth_rates.mean()
         return {
             "growth_rate": avg_growth,
-            "consistency": "Consistent" if growth_rates.std() < 0.1 else "Variable",
+            "consistency": (
+                "Consistent" if np.nanstd(growth_rates) < 0.1 else "Variable"
+            ),
         }
 
     def _assess_yield_attractiveness(self, dividend_yield: float) -> str:

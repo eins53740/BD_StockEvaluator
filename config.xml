@@ -15,7 +15,7 @@
     <allow-intent href="sms:*" />
     <allow-intent href="mailto:*" />
     <allow-intent href="geo:*" />
-    
+
     <!-- Android Configuration -->
     <platform name="android">
         <allow-intent href="market:*" />
@@ -37,19 +37,19 @@
         <splash density="port-xhdpi" src="www/res/screen/android/drawable-port-xhdpi-screen.png" />
         <splash density="port-xxhdpi" src="www/res/screen/android/drawable-port-xxhdpi-screen.png" />
         <splash density="port-xxxhdpi" src="www/res/screen/android/drawable-port-xxxhdpi-screen.png" />
-        
+
         <!-- Android Permissions -->
         <uses-permission android:name="android.permission.INTERNET" />
         <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
         <uses-permission android:name="android.permission.VIBRATE" />
-        
+
         <!-- Android Preferences -->
         <preference name="android-minSdkVersion" value="22" />
         <preference name="android-targetSdkVersion" value="33" />
         <preference name="AndroidLaunchMode" value="singleTop" />
         <preference name="AndroidPersistentFileLocation" value="Compatibility" />
     </platform>
-    
+
     <!-- Global Preferences -->
     <preference name="DisallowOverscroll" value="true" />
     <preference name="BackgroundColor" value="0xfff8f9fa" />
@@ -59,7 +59,7 @@
     <preference name="StatusBarOverlaysWebView" value="false" />
     <preference name="StatusBarBackgroundColor" value="#007bff" />
     <preference name="StatusBarStyle" value="lightcontent" />
-    
+
     <!-- Plugins -->
     <plugin name="cordova-plugin-whitelist" spec="1" />
     <plugin name="cordova-plugin-statusbar" spec="2" />

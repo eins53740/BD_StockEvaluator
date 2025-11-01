@@ -124,7 +124,7 @@ risk_assessment = {
 # Automated testing for multiple scenarios
 test_scenarios = [
     'Strong Buy Scenario',
-    'Do Not Buy Scenario', 
+    'Do Not Buy Scenario',
     'Edge Case with None Values',
     'Special Characters Test'
 ]

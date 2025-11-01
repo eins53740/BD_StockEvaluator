@@ -19,7 +19,14 @@ from typing import (
     Sequence,
 )
 
+try:
+    # Python 3.9+ zoneinfo
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover - fallback
+    ZoneInfo = None
+
 import requests
+import uuid
 import yfinance as yf
 
 from .keys import get_api_key
@@ -133,6 +140,8 @@ class NormalizedSnapshot:
     ticker: str
     as_of: datetime
     currency: str
+    exchange: Optional[str]
+    country: Optional[str]
     fundamentals: Dict[str, Any]
     fundamentals_converted: Dict[str, Any]
     prices: Dict[str, Any]
@@ -142,6 +151,7 @@ class NormalizedSnapshot:
     providers: Dict[str, Optional[str]]
     history: List[Dict[str, Any]]
     price_history: List[Dict[str, Any]]
+    fx_rates: Dict[str, float]
 
 
 class SQLiteDataStore:
@@ -167,6 +177,8 @@ class SQLiteDataStore:
                 as_of TEXT NOT NULL,
                 provider TEXT,
                 currency TEXT,
+                exchange TEXT,
+                country TEXT,
                 eps REAL,
                 pe REAL,
                 peg REAL,
@@ -275,6 +287,18 @@ class SQLiteDataStore:
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fx_snapshot (
+                id TEXT PRIMARY KEY,
+                as_of TEXT NOT NULL,
+                provider TEXT,
+                rates_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
         self._conn.commit()
 
     def set_precedence(self, precedence: Dict[str, Sequence[str]]) -> None:
@@ -306,6 +330,8 @@ class SQLiteDataStore:
                     as_of,
                     provider,
                     currency,
+                    exchange,
+                    country,
                     eps,
                     pe,
                     peg,
@@ -320,11 +346,13 @@ class SQLiteDataStore:
                     eps_usd,
                     eps_eur,
                     raw_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker) DO UPDATE SET
                     as_of=excluded.as_of,
                     provider=excluded.provider,
                     currency=excluded.currency,
+                    exchange=excluded.exchange,
+                    country=excluded.country,
                     eps=excluded.eps,
                     pe=excluded.pe,
                     peg=excluded.peg,
@@ -345,6 +373,8 @@ class SQLiteDataStore:
                     as_of_iso,
                     snapshot.providers.get("fundamentals"),
                     snapshot.currency,
+                    snapshot.exchange,
+                    snapshot.country,
                     snapshot.fundamentals.get("eps"),
                     snapshot.fundamentals.get("pe"),
                     snapshot.fundamentals.get("peg"),
@@ -361,6 +391,46 @@ class SQLiteDataStore:
                     json.dumps(payload, default=_json_serializer),
                 ),
             )
+
+    def save_fx_snapshot(
+        self, as_of: datetime, provider: Optional[str], rates: Dict[str, float]
+    ) -> str:
+        """Persist FX rates as a snapshot and return the generated id."""
+        fx_id = str(uuid.uuid4())
+        as_of_iso = _to_iso(as_of)
+        created = _to_iso(datetime.now(timezone.utc))
+        rates_json = json.dumps(rates)
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO fx_snapshot (id, as_of, provider, rates_json, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (fx_id, as_of_iso, provider, rates_json, created),
+            )
+        return fx_id
+
+    def load_fx_snapshot(self, fx_id: Optional[str] = None) -> Dict[str, Any]:
+        """Load an fx_snapshot by id or return empty dict if not found."""
+        if not fx_id:
+            return {}
+        row = self._conn.execute(
+            """
+            SELECT id, as_of, provider, rates_json, created_at
+            FROM fx_snapshot
+            WHERE id = ?
+            """,
+            (fx_id,),
+        ).fetchone()
+        if not row:
+            return {}
+        return {
+            "id": row["id"],
+            "as_of": row["as_of"],
+            "provider": row["provider"],
+            "rates": json.loads(row["rates_json"]),
+            "created_at": row["created_at"],
+        }
 
     def persist_history(
         self,
@@ -555,6 +625,8 @@ class SQLiteDataStore:
                 as_of,
                 provider,
                 currency,
+                exchange,
+                country,
                 eps,
                 pe,
                 peg,
@@ -1478,7 +1550,16 @@ class MultiSourceDataClient:
             ticker, as_of_dt, aggregated, providers_used, converter
         )
 
+        # Persist normalized snapshot (fundamentals/prices) as before
         self.store.persist_snapshot(snapshot)
+
+        # Persist FX snapshot (rates) and obtain fx_snapshot_id for reproducibility
+        try:
+            fx_snapshot_id = self.store.save_fx_snapshot(
+                as_of_dt, providers_used.get("exchange_rates"), converter.rates
+            )
+        except Exception:
+            fx_snapshot_id = None
         if aggregated.get("history"):
             self.store.persist_history(
                 ticker,
@@ -1508,7 +1589,7 @@ class MultiSourceDataClient:
                 as_of_dt,
             )
 
-        return self._build_stock_info(snapshot)
+        return self._build_stock_info(snapshot, fx_snapshot_id=fx_snapshot_id)
 
     def _normalize_snapshot(
         self,
@@ -1573,6 +1654,9 @@ class MultiSourceDataClient:
         )
         currency = currency.upper() if isinstance(currency, str) else "USD"
 
+        exchange = profile.get("exchange")
+        country = profile.get("country")
+
         fundamentals_converted = {}
         eps = fundamentals.get("eps")
         if eps is not None:
@@ -1626,6 +1710,8 @@ class MultiSourceDataClient:
             ticker=ticker,
             as_of=as_of,
             currency=currency,
+            exchange=exchange,
+            country=country,
             fundamentals=fundamentals,
             fundamentals_converted=fundamentals_converted,
             prices=prices_clean,
@@ -1635,12 +1721,17 @@ class MultiSourceDataClient:
             providers=providers_map,
             history=history_entries,
             price_history=price_history_entries,
+            fx_rates=converter.rates,
         )
 
-    def _build_stock_info(self, snapshot: NormalizedSnapshot) -> Dict[str, Any]:
+    def _build_stock_info(
+        self, snapshot: NormalizedSnapshot, fx_snapshot_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "ticker": snapshot.ticker,
             "currency": snapshot.prices.get("currency", snapshot.currency),
+            "exchange": snapshot.exchange,
+            "country": snapshot.country,
             "regularMarketPrice": snapshot.prices.get("close"),
             "regularMarketPreviousClose": snapshot.prices.get("previous_close"),
             "regularMarketPriceUSD": snapshot.prices_converted.get("close_usd"),
@@ -1655,6 +1746,65 @@ class MultiSourceDataClient:
             "historicalMetrics": snapshot.history,
             "priceHistory": snapshot.price_history,
         }
+
+        # Add FX snapshot metadata and timestamps
+        info["fx_snapshot"] = snapshot.fx_rates or {}
+        info["fx_snapshot_id"] = fx_snapshot_id
+        # Small human-readable summary: top 5 currencies by code
+        if snapshot.fx_rates:
+            try:
+                top_items = sorted(snapshot.fx_rates.items(), key=lambda kv: kv[0])[:5]
+                info["fx_snapshot_summary"] = {k: v for k, v in top_items}
+            except Exception:
+                info["fx_snapshot_summary"] = {}
+        info["asof_utc"] = snapshot.as_of.isoformat().replace("+00:00", "Z")
+        # Compute asof_exchange_tz using a simple exchange->timezone mapping when possible.
+        exchange_tz_map = {
+            "NYSE": "America/New_York",
+            "NASDAQ": "America/New_York",
+            "AMEX": "America/New_York",
+            "TSX": "America/Toronto",
+            "LSE": "Europe/London",
+            "XETRA": "Europe/Berlin",
+            "FWB": "Europe/Berlin",
+            "SSE": "Asia/Shanghai",
+            "SZSE": "Asia/Shanghai",
+            "HKEX": "Asia/Hong_Kong",
+            "JPX": "Asia/Tokyo",
+            "BSE": "Asia/Kolkata",
+        }
+
+        asof_utc_dt = snapshot.as_of
+        tz_name = None
+        try:
+            if snapshot.exchange and isinstance(snapshot.exchange, str):
+                tz_name = exchange_tz_map.get(snapshot.exchange.upper())
+        except Exception:
+            tz_name = None
+
+        if tz_name and ZoneInfo is not None:
+            try:
+                local_dt = asof_utc_dt.astimezone(ZoneInfo(tz_name))
+                info["asof_exchange_tz"] = local_dt.isoformat()
+            except Exception:
+                info["asof_exchange_tz"] = info["asof_utc"]
+        else:
+            info["asof_exchange_tz"] = info["asof_utc"]
+
+        # Determine if any category used a fallback provider (not the top-precedence provider)
+        fallback = False
+        for category, provider in snapshot.providers.items():
+            if provider is None:
+                continue
+            preferred = None
+            try:
+                preferred = self.precedence.get(category, ())[0]
+            except Exception:
+                preferred = None
+            if preferred and provider != preferred:
+                fallback = True
+                break
+        info["provider_fallback"] = fallback
 
         data_providers = {
             "fundamentals": snapshot.providers.get("fundamentals"),

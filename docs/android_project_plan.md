@@ -72,4 +72,3 @@
 3. Create backlog tickets aligned with sprint plan.
 4. Stand up repo structure (Android + backend) and CI skeleton.
 5. Schedule design reviews for mobile UX mockups.
-

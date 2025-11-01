@@ -25,19 +25,37 @@ except Exception:  # pragma: no cover - graceful fallback
     go = None
     pio = None
 
-from ..core.service import STATIC_DIR, StockAnalysisService
-from ..reports.per_ticker import (
-    compose_ticker_report,
-    export_report_pdf,
-    pdf_generation_available,
-    render_report_html,
-)
-from ..ux.dashboard import (
-    DashboardSnapshot,
-    build_dashboard_layout_spec,
-    collect_dashboard_snapshot,
-)
-from ..ux.chart_explorer import collect_chart_explorer_payload
+try:
+    # Prefer absolute imports when running as a package
+    from bd_stockevaluator.core.service import STATIC_DIR, StockAnalysisService
+    from bd_stockevaluator.reports.per_ticker import (
+        compose_ticker_report,
+        export_report_pdf,
+        pdf_generation_available,
+        render_report_html,
+    )
+    from bd_stockevaluator.ux.dashboard import (
+        DashboardSnapshot,
+        build_dashboard_layout_spec,
+        collect_dashboard_snapshot,
+    )
+    from bd_stockevaluator.ux.chart_explorer import collect_chart_explorer_payload
+except Exception:  # pragma: no cover - fallback for direct script execution
+    # Fallback to relative imports when package context is available
+    from ..core.service import STATIC_DIR, StockAnalysisService
+    from ..reports.per_ticker import (
+        compose_ticker_report,
+        export_report_pdf,
+        pdf_generation_available,
+        render_report_html,
+    )
+    from ..ux.dashboard import (
+        DashboardSnapshot,
+        build_dashboard_layout_spec,
+        collect_dashboard_snapshot,
+    )
+    from ..ux.chart_explorer import collect_chart_explorer_payload
+
 
 DEFAULT_TICKERS = ("AAPL", "MSFT", "GOOGL")
 

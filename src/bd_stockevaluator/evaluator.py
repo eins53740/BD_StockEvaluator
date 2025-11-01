@@ -85,8 +85,9 @@ class StockEvaluator:
         if rev_status == "PASS":
             self.active_links.add(("B", "C"))
         else:
+            # Only mark Do Not Buy on definite FAILs; CLOSE_FAILs are non-fatal
             self.active_links.add(("B", "D"))
-            if not verdict_set:
+            if rev_status == "FAIL" and not verdict_set:
                 verdict = "Do Not Buy"
                 verdict_set = True
 
@@ -134,7 +135,7 @@ class StockEvaluator:
             self.active_links.add(("E", "G"))
         else:
             self.active_links.add(("E", "D"))
-            if not verdict_set:
+            if roe_status == "FAIL" and not verdict_set:
                 verdict = "Do Not Buy"
                 verdict_set = True
 
@@ -146,7 +147,7 @@ class StockEvaluator:
             self.active_links.add(("G", "H"))
         else:
             self.active_links.add(("G", "D"))
-            if not verdict_set:
+            if margin_status == "FAIL" and not verdict_set:
                 verdict = "Do Not Buy"
                 verdict_set = True
 
@@ -156,7 +157,7 @@ class StockEvaluator:
             self.active_links.add(("H", "I"))
         else:
             self.active_links.add(("H", "D"))
-            if not verdict_set:
+            if de_status == "FAIL" and not verdict_set:
                 verdict = "Do Not Buy"
                 verdict_set = True
 

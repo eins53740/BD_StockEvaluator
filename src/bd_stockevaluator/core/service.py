@@ -8,7 +8,9 @@ reused by alternative backends (e.g., FastAPI) and future Android integrations.
 from __future__ import annotations
 
 import os
+import json
 import textwrap
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, MutableMapping, Sequence, Tuple
@@ -677,26 +679,68 @@ def generate_flowchart_definition(
 ) -> str:
     """Produce Mermaid definition for flowchart rendering."""
 
-    graph_def = textwrap.dedent(
-        """
-        graph TD
-            A([Start Analysis]) --> B{Revenue Growth<br/>≥ 10%?};
-            B -->|Yes| C[Valuation Check];
-            B -->|No| D[Do Not Buy];
-            C -->|P/E < 25| E{ROE<br/>≥ 15%?};
-            C -->|Else| F{PEG<br/>&lt; 2?};
-            F -->|Yes| E;
-            F -->|No| D;
-            E -->|Yes| G{Net Margin<br/>≥ 10%?};
-            E -->|No| D;
-            G -->|Yes| H{Debt/Equity<br/>&lt; 1?};
-            G -->|No| D;
-            H -->|Yes| I{Quick Ratio<br/>≥ 1.5?};
-            H -->|No| D;
-            I -->|Yes| J([BUY]);
-            I -->|No| K([BUY with Caution]);
-        """
-    ).strip()
+    def wrap_text(text, width=20):
+        """Wraps text to a maximum of two lines."""
+        # Normalize whitespace and remove excessive blank lines
+        if not text:
+            return ""
+        compact = " ".join(str(text).split())
+        lines = textwrap.wrap(compact, width=width)
+        if not lines:
+            return ""
+        if len(lines) > 2:
+            lines = lines[:2]
+            # ensure ellipsis doesn't create double spaces
+            lines[1] = lines[1].rstrip() + "..."
+        return "<br/>".join(lines)
+
+    nodes = {
+        "A": "Start Analysis",
+        "B": "Revenue Growth >= 10%?",
+        "C": "Valuation Check",
+        "D": "Do Not Buy",
+        "E": "ROE >= 15%?",
+        "F": "PEG < 2?",
+        "G": "Net Margin >= 10%?",
+        "H": "Debt/Equity < 1?",
+        "I": "Quick Ratio >= 1.5?",
+        "J": "BUY",
+        "K": "BUY with Caution",
+    }
+
+    graph_def = "graph TD\n"
+    for node_id, text in nodes.items():
+        wrapped_text = wrap_text(text)
+        if node_id in ["D", "J", "K"]:
+            graph_def += f'    {node_id}(["{wrapped_text}"]);\n'
+        elif node_id == "A":
+            graph_def += f'    {node_id}(["{wrapped_text}"]);\n'
+        else:
+            graph_def += f"    {node_id}{{{wrapped_text}}};\n"
+
+    links = [
+        ("A", "B"),
+        ("B", "C", "Yes"),
+        ("B", "D", "No"),
+        ("C", "E", "P/E < 25"),
+        ("C", "F", "Else"),
+        ("F", "E", "Yes"),
+        ("F", "D", "No"),
+        ("E", "G", "Yes"),
+        ("E", "D", "No"),
+        ("G", "H", "Yes"),
+        ("G", "D", "No"),
+        ("H", "I", "Yes"),
+        ("H", "D", "No"),
+        ("I", "J", "Yes"),
+        ("I", "K", "No"),
+    ]
+
+    for link in links:
+        if len(link) == 3:
+            graph_def += f"    {link[0]} -->|{link[2]}| {link[1]};\n"
+        else:
+            graph_def += f"    {link[0]} --> {link[1]};\n"
 
     node_map = {
         "Revenue Growth (TTM)": "B",
@@ -772,7 +816,10 @@ def generate_flowchart_definition(
             styles.append(f"class {node_id} decision;")
 
     script_parts = [graph_def, class_defs, *styles, *link_styles]
-    return "\n".join(script_parts)
+    script = "\n".join(script_parts)
+    # Collapse multiple blank lines to a single newline to avoid Mermaid parsing issues
+    script = re.sub(r"\n{2,}", "\n", script)
+    return script.strip()
 
 
 class StockAnalysisService:
@@ -785,6 +832,15 @@ class StockAnalysisService:
     ) -> None:
         self.opinion_api_key = opinion_api_key
         self.watchlist_engine = watchlist_engine or WatchlistAlertEngine()
+        self.thresholds = self._load_thresholds()
+
+    def _load_thresholds(self) -> Dict[str, float]:
+        """Loads thresholds from a JSON file."""
+        thresholds_path = PROJECT_ROOT / "config" / "thresholds.json"
+        if thresholds_path.exists():
+            with open(thresholds_path, "r") as f:
+                return json.load(f)
+        return StockEvaluator.THRESHOLDS
 
     @property
     def macro_service(self) -> MacroContextService:
@@ -799,7 +855,7 @@ class StockAnalysisService:
         stock_info = get_stock_data(ticker_symbol)
         company_name = stock_info.get("longName", ticker_symbol.upper())
 
-        evaluator = StockEvaluator(stock_info)
+        evaluator = StockEvaluator(stock_info, thresholds=self.thresholds)
         verdict, path, active_links = evaluator.evaluate()
 
         flowchart_def = generate_flowchart_definition(evaluator, verdict, path)
@@ -1018,4 +1074,7 @@ class StockAnalysisService:
             "price_history": analysis.get("price_history", []),
             "technical_chart": technical_chart,
             "macro_snapshot": macro_snapshot,
+            "fx_snapshot_id": analysis.get("fx_snapshot_id"),
+            "fx_snapshot_summary": analysis.get("fx_snapshot_summary")
+            or analysis.get("fx_snapshot"),
         }
