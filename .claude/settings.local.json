@@ -4,7 +4,16 @@
       "Bash(uvicorn:*)",
       "Bash(timeout:*)",
       "Bash(python -m uvicorn:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(curl -s http://127.0.0.1:8000/health)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(for i in {1..65})",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code} \" http://127.0.0.1:8000/health)",
+      "Bash(done)",
+      "Bash(for i in {1..5})",
+      "Bash(do echo \"Request $i:\")",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []
