@@ -2,12 +2,54 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: bd_stockevaluator:latest
     container_name: stock-evaluator-api
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
+      # AI API Keys
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      SECRET_KEY: ${SECRET_KEY:-change-me}
+      GEMINI_MODEL: ${GEMINI_MODEL:-models/gemini-2.5-flash-lite}
+      # Data Provider Keys
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      # Application Settings
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      PORT: 8000
+      # Python Settings
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+    volumes:
+      # Persistent data storage for SQLite DB and cache
+      - stock-data:/app/data
+      # Optional: mount custom config
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    networks:
+      - stock-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  stock-data:
+    driver: local
+
+networks:
+  stock-network:
+    driver: bridge

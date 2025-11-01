@@ -38,6 +38,49 @@ The backend provides a web UI and a REST API.
     uvicorn src.bd_stockevaluator.api.main:app --reload
     ```
 
+### Docker Deployment (Recommended for Production)
+
+The easiest way to run the backend is using Docker:
+
+**Prerequisites:**
+- Docker and Docker Compose installed
+
+**Quick Start with Docker:**
+1.  Copy the environment template and configure your API keys:
+    ```bash
+    cp .env.example .env
+    # Edit .env with your API keys
+    ```
+
+2.  Build and run with Docker Compose:
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  Access the API at `http://localhost:8000/health`
+
+**Manual Docker Build:**
+```bash
+# Build the image
+docker build -t bd_stockevaluator:latest .
+
+# Run the container
+docker run -d \
+  --name stock-evaluator \
+  -p 8000:8000 \
+  -e GROQ_API_KEY=your_key_here \
+  -e FRED_API_KEY=your_key_here \
+  -v stock-data:/app/data \
+  bd_stockevaluator:latest
+```
+
+**Features:**
+- Multi-stage build for minimal image size
+- Non-root user for enhanced security
+- Automatic health checks every 30s
+- Persistent data storage with Docker volumes
+- Production-ready configuration
+
 ### Android Client
 
 The Android client provides a native mobile experience for stock evaluation.

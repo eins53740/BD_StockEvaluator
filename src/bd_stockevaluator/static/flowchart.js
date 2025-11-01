@@ -399,11 +399,11 @@ function fixSVGSizing(element) {
   try {
     const svg = element.querySelector('svg');
     if (!svg) return;
-    
+
     // Remove restrictive width/height attributes and let CSS handle sizing
     svg.removeAttribute('width');
     svg.removeAttribute('height');
-    
+
     // Ensure proper viewBox is set
     const viewBox = svg.getAttribute('viewBox');
     if (!viewBox) {
@@ -411,18 +411,156 @@ function fixSVGSizing(element) {
       const bbox = svg.getBBox();
       svg.setAttribute('viewBox', `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
     }
-    
+
     // Set responsive attributes
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.style.width = '100%';
     svg.style.height = 'auto';
     svg.style.maxWidth = '1200px';
     svg.style.minHeight = '400px';
-    
+
     console.log('SVG sizing fixed successfully');
-    
+
   } catch (error) {
     console.error('Error fixing SVG sizing:', error);
+  }
+}
+
+// Epic 10 F10.2: Improve text visibility with 2-line label wrapping
+function wrapLongLabels(element) {
+  try {
+    console.log('Wrapping long labels for better visibility (Epic 10 F10.2)');
+
+    const svg = element.querySelector('svg');
+    if (!svg) return;
+
+    // Find all text elements in nodes
+    const textElements = svg.querySelectorAll('g.node text, g.node span');
+
+    textElements.forEach(textEl => {
+      const text = textEl.textContent.trim();
+
+      // Skip if already short enough (less than 30 characters)
+      if (text.length <= 30) return;
+
+      // Calculate if text needs wrapping
+      const maxCharsPerLine = 25;
+      const maxLines = 2;
+
+      // Split text into words
+      const words = text.split(/\s+/);
+      const lines = [];
+      let currentLine = '';
+
+      words.forEach(word => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+        if (testLine.length <= maxCharsPerLine || lines.length >= maxLines - 1) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+          currentLine = word;
+        }
+      });
+
+      // Add the last line
+      if (currentLine) {
+        if (lines.length >= maxLines) {
+          // Truncate with ellipsis if exceeds 2 lines
+          lines[maxLines - 1] = lines[maxLines - 1].substring(0, maxCharsPerLine - 3) + '...';
+        } else {
+          lines.push(currentLine);
+        }
+      }
+
+      // Skip if no wrapping needed
+      if (lines.length <= 1) return;
+
+      // Get parent node and calculate positioning
+      const nodeGroup = textEl.closest('g.node');
+      if (!nodeGroup) return;
+
+      // Get the rect/shape to calculate center position
+      const shape = nodeGroup.querySelector('rect, circle, polygon');
+      if (!shape) return;
+
+      // Calculate shape dimensions
+      let shapeHeight, shapeWidth, shapeY, shapeX;
+      if (shape.tagName === 'rect') {
+        shapeHeight = parseFloat(shape.getAttribute('height')) || 60;
+        shapeWidth = parseFloat(shape.getAttribute('width')) || 200;
+        shapeY = parseFloat(shape.getAttribute('y')) || 0;
+        shapeX = parseFloat(shape.getAttribute('x')) || 0;
+      } else if (shape.tagName === 'circle') {
+        const r = parseFloat(shape.getAttribute('r')) || 30;
+        shapeHeight = r * 2;
+        shapeWidth = r * 2;
+        const cy = parseFloat(shape.getAttribute('cy')) || 0;
+        const cx = parseFloat(shape.getAttribute('cx')) || 0;
+        shapeY = cy - r;
+        shapeX = cx - r;
+      } else {
+        // Fallback for other shapes
+        const bbox = shape.getBBox();
+        shapeHeight = bbox.height;
+        shapeWidth = bbox.width;
+        shapeY = bbox.y;
+        shapeX = bbox.x;
+      }
+
+      // Increase shape height if needed for 2 lines
+      const lineHeight = 18;
+      const totalTextHeight = lines.length * lineHeight;
+      const requiredHeight = Math.max(shapeHeight, totalTextHeight + 20); // 20px padding
+
+      if (shape.tagName === 'rect' && requiredHeight > shapeHeight) {
+        const heightDiff = requiredHeight - shapeHeight;
+        shape.setAttribute('height', requiredHeight);
+        // Adjust y to keep center position
+        const newY = shapeY - heightDiff / 2;
+        shape.setAttribute('y', newY);
+      }
+
+      // Clear existing text
+      textEl.textContent = '';
+
+      // Create tspan elements for each line
+      const baseY = shapeY + requiredHeight / 2 - (lines.length * lineHeight) / 2 + lineHeight / 2;
+      const centerX = shapeX + shapeWidth / 2;
+
+      lines.forEach((line, index) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.textContent = line;
+        tspan.setAttribute('x', centerX);
+        tspan.setAttribute('y', baseY + index * lineHeight);
+        tspan.setAttribute('text-anchor', 'middle');
+        tspan.setAttribute('dominant-baseline', 'middle');
+
+        // Apply font styling
+        tspan.style.fontSize = '14px';
+        tspan.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        tspan.style.fill = '#000';
+
+        textEl.appendChild(tspan);
+      });
+
+      // Add title attribute for full text on hover
+      const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      titleEl.textContent = text;
+      textEl.appendChild(titleEl);
+
+      // Add aria-label for accessibility
+      textEl.setAttribute('aria-label', text);
+
+      console.log(`Wrapped label: "${text}" into ${lines.length} lines`);
+    });
+
+    console.log('Label wrapping completed');
+
+  } catch (error) {
+    console.error('Error wrapping long labels:', error);
   }
 }
 
@@ -430,24 +568,27 @@ function fixSVGSizing(element) {
 function enhanceFlowchartVisualization(element) {
   try {
     console.log('Enhancing flowchart visualization with animations');
-    
+
     const svg = element.querySelector('svg');
     if (!svg) {
       console.warn('No SVG found in mermaid element for enhancement');
       return;
     }
 
+    // Epic 10 F10.2: Wrap long labels for better visibility
+    wrapLongLabels(element);
+
     // Add CSS animations for the flowchart
     addFlowchartAnimations();
-    
+
     // Animate the flowchart elements sequentially
     animateFlowchartElements(svg);
-    
+
     // Add interactive hover effects
     addInteractiveEffects(svg);
-    
+
     console.log('Flowchart visualization enhanced successfully');
-    
+
   } catch (error) {
     console.error('Error enhancing flowchart visualization:', error);
   }
