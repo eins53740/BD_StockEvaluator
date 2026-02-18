@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, flash, render_template, request, url_for
+from flask import Flask, flash, jsonify, render_template, request, url_for
 
 try:
     # Preferred path when executed as part of the installed package.
@@ -46,6 +46,60 @@ app.secret_key = os.environ.get("SECRET_KEY", "a-default-secret-key-for-dev-only
 analysis_service = StockAnalysisService()
 _refresh_thread = None
 _refresh_stop_event = threading.Event()
+
+# Common ticker list for autocomplete (loaded once).
+_POPULAR_TICKERS = [
+    {"ticker": "AAPL", "name": "Apple Inc."},
+    {"ticker": "MSFT", "name": "Microsoft Corporation"},
+    {"ticker": "GOOGL", "name": "Alphabet Inc."},
+    {"ticker": "AMZN", "name": "Amazon.com Inc."},
+    {"ticker": "NVDA", "name": "NVIDIA Corporation"},
+    {"ticker": "META", "name": "Meta Platforms Inc."},
+    {"ticker": "TSLA", "name": "Tesla Inc."},
+    {"ticker": "BRK-B", "name": "Berkshire Hathaway Inc."},
+    {"ticker": "JPM", "name": "JPMorgan Chase & Co."},
+    {"ticker": "V", "name": "Visa Inc."},
+    {"ticker": "JNJ", "name": "Johnson & Johnson"},
+    {"ticker": "WMT", "name": "Walmart Inc."},
+    {"ticker": "PG", "name": "Procter & Gamble Co."},
+    {"ticker": "MA", "name": "Mastercard Inc."},
+    {"ticker": "UNH", "name": "UnitedHealth Group Inc."},
+    {"ticker": "HD", "name": "The Home Depot Inc."},
+    {"ticker": "DIS", "name": "The Walt Disney Co."},
+    {"ticker": "PYPL", "name": "PayPal Holdings Inc."},
+    {"ticker": "NFLX", "name": "Netflix Inc."},
+    {"ticker": "ADBE", "name": "Adobe Inc."},
+    {"ticker": "CRM", "name": "Salesforce Inc."},
+    {"ticker": "AMD", "name": "Advanced Micro Devices Inc."},
+    {"ticker": "INTC", "name": "Intel Corporation"},
+    {"ticker": "CSCO", "name": "Cisco Systems Inc."},
+    {"ticker": "PEP", "name": "PepsiCo Inc."},
+    {"ticker": "KO", "name": "The Coca-Cola Co."},
+    {"ticker": "COST", "name": "Costco Wholesale Corp."},
+    {"ticker": "AVGO", "name": "Broadcom Inc."},
+    {"ticker": "T", "name": "AT&T Inc."},
+    {"ticker": "VZ", "name": "Verizon Communications Inc."},
+    {"ticker": "NKE", "name": "Nike Inc."},
+    {"ticker": "MRK", "name": "Merck & Co. Inc."},
+    {"ticker": "PFE", "name": "Pfizer Inc."},
+    {"ticker": "ABBV", "name": "AbbVie Inc."},
+    {"ticker": "XOM", "name": "Exxon Mobil Corp."},
+    {"ticker": "CVX", "name": "Chevron Corp."},
+    {"ticker": "BA", "name": "The Boeing Co."},
+    {"ticker": "CAT", "name": "Caterpillar Inc."},
+    {"ticker": "GS", "name": "Goldman Sachs Group Inc."},
+    {"ticker": "IBM", "name": "International Business Machines"},
+    {"ticker": "QCOM", "name": "Qualcomm Inc."},
+    {"ticker": "TXN", "name": "Texas Instruments Inc."},
+    {"ticker": "LOW", "name": "Lowe's Companies Inc."},
+    {"ticker": "SBUX", "name": "Starbucks Corp."},
+    {"ticker": "INTU", "name": "Intuit Inc."},
+    {"ticker": "AMAT", "name": "Applied Materials Inc."},
+    {"ticker": "GE", "name": "GE Aerospace"},
+    {"ticker": "ISRG", "name": "Intuitive Surgical Inc."},
+    {"ticker": "NOW", "name": "ServiceNow Inc."},
+    {"ticker": "BKNG", "name": "Booking Holdings Inc."},
+]
 
 
 def _background_worker(tickers, interval_minutes):
@@ -116,6 +170,17 @@ start_background_refresh()
 atexit.register(stop_background_refresh)
 
 
+def _prepare_chart_url(analysis):
+    """Resolve the technical chart PNG path to a URL for the template."""
+    chart = analysis.get("technical_analysis", {}).get("chart", {})
+    chart_png = chart.get("png")
+    if chart_png:
+        chart["png_url"] = url_for(
+            "static",
+            filename=str(chart_png).replace("\\", "/"),
+        )
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     current_year = datetime.now().year
@@ -128,16 +193,9 @@ def index():
 
         try:
             analysis = analysis_service.analyze(ticker_symbol)
-            chart = analysis.get("technical_analysis", {}).get("chart", {})
-            chart_png = chart.get("png")
-            if chart_png:
-                chart["png_url"] = url_for(
-                    "static",
-                    filename=str(chart_png).replace("\\", "/"),
-                )
+            _prepare_chart_url(analysis)
             return render_template("index.html", current_year=current_year, **analysis)
         except Exception as exc:
-            # Clear cache to avoid stale errors, then show message to the user.
             if hasattr(get_stock_data, "cache"):
                 get_stock_data.cache.clear()
             flash(str(exc), "error")
@@ -146,6 +204,38 @@ def index():
             )
 
     return render_template("index.html", current_year=current_year)
+
+
+@app.route("/evaluate", methods=["POST"])
+def evaluate_htmx():
+    """HTMX endpoint: returns the results partial HTML fragment."""
+    ticker_symbol = request.form.get("ticker", "").upper().strip()
+    if not ticker_symbol:
+        return '<div class="flash-error" role="alert">Please enter a stock ticker.</div>'
+
+    try:
+        analysis = analysis_service.analyze(ticker_symbol)
+        _prepare_chart_url(analysis)
+        return render_template("partials/_results.html", **analysis)
+    except Exception as exc:
+        if hasattr(get_stock_data, "cache"):
+            get_stock_data.cache.clear()
+        return f'<div class="flash-error" role="alert">{exc}</div>'
+
+
+@app.route("/api/search")
+def search_tickers():
+    """Autocomplete endpoint: returns JSON list of matching tickers."""
+    query = request.args.get("q", "").upper().strip()
+    if not query:
+        return jsonify([])
+
+    matches = [
+        t
+        for t in _POPULAR_TICKERS
+        if query in t["ticker"] or query in t["name"].upper()
+    ]
+    return jsonify(matches[:8])
 
 
 if __name__ == "__main__":

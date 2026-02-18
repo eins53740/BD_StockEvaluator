@@ -32,6 +32,7 @@ dependencies = [
     "plotly>=5.24.0",
     "pydantic>=2.7.0",
     "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.18",
     "requests>=2.32.5",
     "scikit-learn>=1.7.2",
     "statsmodels>=0.14.5",
@@ -48,12 +49,24 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.4.2",
+    "pytest-cov>=6.0",
+    "httpx>=0.28.0",
     "black==25.9.0",
     "ruff==0.13.2",
-    "pre-commit>=4.6.0",
+    "pre-commit>=4.0.0",
     "black>=24.10.0",
     "ruff>=0.8.1",
     "pyinstaller>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: fast, isolated unit tests",
+    "integration: tests that hit real APIs or databases",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
 ]
 
 [tool.setuptools]

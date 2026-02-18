@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" x-data="appState()" :class="{ 'dark': darkMode, 'light': !darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered stock analysis with fundamental evaluation, technical indicators, and investment verdicts.">
+    <meta name="theme-color" content="#007bff">
+    <title>{% block title %}Stock Evaluator{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body :class="{ 'wide-mode': wideMode }">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <a href="/" class="navbar-brand">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 17l6-6 4 4 8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 3h4v4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            StockEval
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="/" class="nav-link active">Evaluate</a></li>
+            <li>
+                <button class="nav-link btn-ghost" @click="wideMode = !wideMode; savePrefs()"
+                        :class="{ active: wideMode }" :aria-pressed="wideMode.toString()"
+                        title="Toggle wide layout" aria-label="Toggle wide layout">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M3 3h8v2H5v6H3V3zm18 0v8h-2V5h-6V3h8zM3 21v-8h2v6h6v2H3zm18 0h-8v-2h6v-6h2v8z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </li>
+            <li>
+                <button class="nav-link btn-ghost" @click="toggleDarkMode()"
+                        :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+                        :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+                    <template x-if="darkMode">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41m12.73 0l-1.41-1.41M6.34 6.34L4.93 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </template>
+                    <template x-if="!darkMode">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </template>
+                </button>
+            </li>
+            <li>
+                <button class="nav-link btn-ghost" @click="showShortcuts = true"
+                        title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+                    <kbd style="font-size:0.75em">?</kbd>
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content" class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; {{ current_year }} <a href="https://www.linkedin.com/in/brunosimaodias" target="_blank" rel="noopener noreferrer">Bruno Dias</a>. All Rights Reserved.</p>
+        <p style="font-size:0.8em;margin-top:0.5em;color:var(--color-text-secondary);">This tool is for educational purposes only. Not financial advice.</p>
+    </footer>
+
+    <!-- Back to Top button -->
+    <button class="back-to-top" :class="{ visible: scrollY > 400 }" @click="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 19V5m-7 7l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="shortcuts-modal" x-show="showShortcuts" x-cloak @keydown.escape.window="showShortcuts = false" @click.self="showShortcuts = false" role="dialog" aria-label="Keyboard shortcuts">
+        <div class="shortcuts-modal-content">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-row"><span>Focus search</span><kbd>/</kbd></div>
+            <div class="shortcut-row"><span>Clear search</span><kbd>Esc</kbd></div>
+            <div class="shortcut-row"><span>Toggle dark mode</span><kbd>D</kbd></div>
+            <div class="shortcut-row"><span>Toggle wide mode</span><kbd>W</kbd></div>
+            <div class="shortcut-row"><span>Show shortcuts</span><kbd>?</kbd></div>
+            <div style="margin-top:1em;text-align:right;">
+                <button class="btn btn-primary" @click="showShortcuts = false">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alpine.js App State -->
+    <script>
+        function appState() {
+            return {
+                darkMode: false,
+                wideMode: false,
+                showShortcuts: false,
+                scrollY: 0,
+
+                init() {
+                    // Restore preferences
+                    try {
+                        const dm = localStorage.getItem('bd_dark_mode');
+                        if (dm === 'true') this.darkMode = true;
+                        else if (dm === 'false') this.darkMode = false;
+                        else this.darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        this.wideMode = localStorage.getItem('bd_wide_mode') === '1';
+                    } catch(e) {}
+
+                    // Track scroll for back-to-top
+                    window.addEventListener('scroll', () => { this.scrollY = window.scrollY; }, { passive: true });
+
+                    // Keyboard shortcuts
+                    window.addEventListener('keydown', (e) => {
+                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+                        if (e.key === '/') { e.preventDefault(); document.querySelector('.search-input')?.focus(); }
+                        else if (e.key === 'd' || e.key === 'D') { this.toggleDarkMode(); }
+                        else if (e.key === 'w' || e.key === 'W') { this.wideMode = !this.wideMode; this.savePrefs(); }
+                        else if (e.key === '?') { this.showShortcuts = !this.showShortcuts; }
+                    });
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    this.savePrefs();
+                },
+
+                savePrefs() {
+                    try {
+                        localStorage.setItem('bd_dark_mode', this.darkMode.toString());
+                        localStorage.setItem('bd_wide_mode', this.wideMode ? '1' : '0');
+                    } catch(e) {}
+                }
+            };
+        }
+    </script>
+
+    <!-- Flowchart JS (loaded after DOM) -->
+    <script src="{{ url_for('static', filename='flowchart.js') }}"></script>
+
+    {% block scripts %}{% endblock %}
+
+    <style>[x-cloak] { display: none !important; }</style>
+</body>
+</html>

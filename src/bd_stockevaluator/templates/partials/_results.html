@@ -1,0 +1,419 @@
+{# Results section - rendered after stock evaluation #}
+<div x-data="{ tab: 'overview' }">
+
+    {# Verdict Banner #}
+    <div class="verdict-banner {{ 'verdict-dnb' if 'Do Not Buy' in result else 'verdict-caution' if 'Caution' in result else 'verdict-buy' }}">
+        <h2>{{ result }}</h2>
+        <span class="company-name">{{ company_name }} ({{ ticker }})</span>
+    </div>
+
+    {# Tabs Navigation #}
+    <div class="tabs" role="tablist">
+        <button class="tab-btn" :class="{ active: tab === 'overview' }" @click="tab = 'overview'" role="tab" :aria-selected="tab === 'overview'">Overview</button>
+        <button class="tab-btn" :class="{ active: tab === 'fundamentals' }" @click="tab = 'fundamentals'" role="tab" :aria-selected="tab === 'fundamentals'">Fundamentals</button>
+        <button class="tab-btn" :class="{ active: tab === 'technical' }" @click="tab = 'technical'" role="tab" :aria-selected="tab === 'technical'">Technical</button>
+        <button class="tab-btn" :class="{ active: tab === 'macro' }" @click="tab = 'macro'" role="tab" :aria-selected="tab === 'macro'">Macro & Quality</button>
+        <button class="tab-btn" :class="{ active: tab === 'comparative' }" @click="tab = 'comparative'" role="tab" :aria-selected="tab === 'comparative'">Comparative</button>
+    </div>
+
+    {# ===== OVERVIEW TAB ===== #}
+    <div class="tab-panel" :class="{ active: tab === 'overview' }" role="tabpanel" x-show="tab === 'overview'">
+        {# Flowchart #}
+        <div class="analysis-section">
+            <h3>Decision Flowchart</h3>
+            <div class="mermaid full-width">{{ flowchart_definition | safe }}</div>
+        </div>
+
+        {# Decision Path #}
+        <div class="analysis-section">
+            <h3>Decision Path Details</h3>
+            <table>
+                <thead><tr><th>Metric</th><th>Rule</th><th>Actual Value</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for name, value, threshold, status in path %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{% if 'P/E' in name or 'PEG' in name %}{{ threshold }}{% elif 'Debt' in name %}&lt; {{ threshold|round(2) }}{% else %}&gt; {{ (threshold * 100)|round(1) ~ '%' if threshold < 1 else threshold|round(2) }}{% endif %}</td>
+                    <td>{% if value is none %}<span class="fail">n/a</span>{% elif 'Growth' in name or 'Equity' in name or 'Margin' in name %}{{ (value * 100)|round(2) }}%{% else %}{{ value|round(2) }}{% endif %}</td>
+                    <td>{% if status == 'PASS' %}<span class="pass">PASS</span>{% elif status == 'FAIL' %}<span class="fail">FAIL</span>{% elif status == 'CLOSE_FAIL' %}<span class="close-fail">CLOSE FAIL</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Risk Assessment #}
+        {% if risk_assessment %}
+        <div class="analysis-section">
+            <h3>Risk Assessment</h3>
+            <div class="risk-overview">
+                <div class="risk-score">
+                    <span class="risk-value {{ 'high-risk' if risk_assessment.overall_risk_score > 60 else 'medium-risk' if risk_assessment.overall_risk_score > 30 else 'low-risk' }}">{{ risk_assessment.overall_risk_score }}%</span>
+                    <span class="risk-label">{{ risk_assessment.risk_level }}</span>
+                </div>
+                <div class="risk-recommendations">
+                    {% for rec in risk_assessment.recommendations %}<p class="recommendation">{{ rec }}</p>{% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# AI Opinion #}
+        {% if opinion_report %}
+        <div class="opinion-report">
+            <h3>AI-Generated Opinion Report</h3>
+            {{ opinion_report | safe }}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ===== FUNDAMENTALS TAB ===== #}
+    <div class="tab-panel" :class="{ active: tab === 'fundamentals' }" role="tabpanel" x-show="tab === 'fundamentals'" x-cloak>
+
+        {% if valuation_scorecard %}
+        <div class="analysis-section">
+            <h3>Valuation Scorecard</h3>
+            {% if valuation_scorecard.overall_score %}
+            {% set overall_class = 'score-positive' if valuation_scorecard.overall_score >= 70 else 'score-neutral' if valuation_scorecard.overall_score >= 50 else 'score-negative' %}
+            <div class="summary-chip"><span class="score-badge {{ overall_class }}">Overall Score: {{ valuation_scorecard.overall_score }}</span></div>
+            {% endif %}
+            <table>
+                <thead><tr><th>Metric</th><th>Current</th><th>Sector Median</th><th>10Y Avg</th><th>Score</th></tr></thead>
+                <tbody>
+                {% for key, data in valuation_scorecard.metrics.items() %}
+                {% set is_pct = 'yield' in key %}
+                <tr>
+                    <td>{{ key.replace('_', ' ')|title }}</td>
+                    <td>{% if data.value is not none %}{% if is_pct %}{{ (data.value * 100)|round(2) }}%{% else %}{{ data.value|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.sector_benchmark is not none %}{% if is_pct %}{{ (data.sector_benchmark * 100)|round(2) }}%{% else %}{{ data.sector_benchmark|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.ten_year_average is not none %}{% if is_pct %}{{ (data.ten_year_average * 100)|round(2) }}%{% else %}{{ data.ten_year_average|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.score is not none %}{% set mc = 'score-positive' if data.score >= 70 else 'score-neutral' if data.score >= 50 else 'score-negative' %}<span class="score-badge {{ mc }}">{{ data.score|round(1) }}</span>{% else %}n/a{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if profitability_snapshot %}
+        <div class="analysis-section">
+            <h3>Profitability &amp; Stability</h3>
+            {% if profitability_snapshot.overall_score %}
+            {% set pc = 'score-positive' if profitability_snapshot.overall_score >= 70 else 'score-neutral' if profitability_snapshot.overall_score >= 50 else 'score-negative' %}
+            <div class="summary-chip"><span class="score-badge {{ pc }}">Score: {{ profitability_snapshot.overall_score }}</span>{% if profitability_snapshot.stability_label %} &mdash; {{ profitability_snapshot.stability_label }}{% endif %}</div>
+            {% endif %}
+            <table>
+                <thead><tr><th>Metric</th><th>Current</th><th>Sector Benchmark</th><th>History Avg</th><th>Score</th></tr></thead>
+                <tbody>
+                {% for key, data in profitability_snapshot.metrics.items() %}
+                {% set is_pct = 'margin' in key or 'roe' in key or 'roa' in key %}
+                <tr>
+                    <td>{{ key.replace('_', ' ')|title }}</td>
+                    <td>{% if data.value is not none %}{% if is_pct %}{{ (data.value * 100)|round(2) }}%{% else %}{{ data.value|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.sector_benchmark is not none %}{% if is_pct %}{{ (data.sector_benchmark * 100)|round(2) }}%{% else %}{{ data.sector_benchmark|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.history_average is not none %}{% if is_pct %}{{ (data.history_average * 100)|round(2) }}%{% else %}{{ data.history_average|round(2) }}{% endif %}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.score is not none %}{% set mc = 'score-positive' if data.score >= 70 else 'score-neutral' if data.score >= 50 else 'score-negative' %}<span class="score-badge {{ mc }}">{{ data.score|round(1) }}</span>{% else %}n/a{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if growth_trends %}
+        <div class="analysis-section">
+            <h3>Growth Trends</h3>
+            {% if growth_trends.overall_score %}
+            {% set gc = 'score-positive' if growth_trends.overall_score >= 70 else 'score-neutral' if growth_trends.overall_score >= 50 else 'score-negative' %}
+            <div class="summary-chip"><span class="score-badge {{ gc }}">Score: {{ growth_trends.overall_score }}</span></div>
+            {% endif %}
+            <table>
+                <thead><tr><th>Metric</th><th>5Y CAGR</th><th>10Y CAGR</th><th>Sector 5Y</th><th>Sector 10Y</th><th>Acceleration</th></tr></thead>
+                <tbody>
+                {% for key, data in growth_trends.metrics.items() %}
+                <tr>
+                    <td>{{ key.upper() }}</td>
+                    <td>{% if data.cagr_5y is not none %}{{ (data.cagr_5y * 100)|round(2) }}%{% else %}n/a{% endif %}</td>
+                    <td>{% if data.cagr_10y is not none %}{{ (data.cagr_10y * 100)|round(2) }}%{% else %}n/a{% endif %}</td>
+                    <td>{% if data.sector_5y is not none %}{{ (data.sector_5y * 100)|round(2) }}%{% else %}n/a{% endif %}</td>
+                    <td>{% if data.sector_10y is not none %}{{ (data.sector_10y * 100)|round(2) }}%{% else %}n/a{% endif %}</td>
+                    <td>{{ data.acceleration|default('n/a')|title }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if intrinsic_value_models and intrinsic_value_models.models %}
+        <div class="analysis-section">
+            <h3>Intrinsic Value Models</h3>
+            {% if intrinsic_value_models.price %}<p>Current Price: <strong>{{ intrinsic_value_models.price|round(2) }}</strong></p>{% endif %}
+            <div class="model-grid">
+                {% for key, model in intrinsic_value_models.models.items() %}
+                <div class="model-card">
+                    <h4>{{ key.replace('_', ' ')|title }}</h4>
+                    <p><strong>Intrinsic Value:</strong> {{ model.value|round(2) }}</p>
+                    {% if model.margin_of_safety_price is not none %}<p><strong>Target (25% MOS):</strong> {{ model.margin_of_safety_price|round(2) }}</p>{% endif %}
+                    {% if model.upside is not none %}<p><strong>Upside:</strong> <span class="{{ 'score-positive' if model.upside > 0 else 'score-negative' }}">{{ (model.upside * 100)|round(1) }}%</span></p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if historical_context %}
+        <div class="analysis-section">
+            <h3>Historical Context</h3>
+            <div class="context-grid">
+                {% for key, data in historical_context.items() %}
+                {% set card_class = 'favourable' if data.favourable else 'unfavourable' if data.favourable is not none else '' %}
+                {% set is_pct = 'yield' in key or 'margin' in key or key in ['roe'] %}
+                <div class="context-card {{ card_class }}">
+                    <h4>{{ key.replace('_', ' ')|title }}</h4>
+                    <p><strong>Current:</strong> {% if data.current is not none %}{% if is_pct %}{{ (data.current * 100)|round(2) }}%{% else %}{{ data.current|round(2) }}{% endif %}{% else %}n/a{% endif %}</p>
+                    <p><strong>10Y Avg:</strong> {% if data.ten_year_average is not none %}{% if is_pct %}{{ (data.ten_year_average * 100)|round(2) }}%{% else %}{{ data.ten_year_average|round(2) }}{% endif %}{% else %}n/a{% endif %}</p>
+                    <p><strong>Delta:</strong> {% if data.delta_pct is not none %}{{ (data.delta_pct * 100)|round(1) }}%{% else %}n/a{% endif %}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if dividend_analysis and dividend_analysis.current_yield %}
+        <div class="analysis-section">
+            <h3>Dividend Analysis</h3>
+            <div class="dividend-info">
+                <div class="dividend-item">
+                    <strong>Current Yield:</strong> {{ (dividend_analysis.current_yield * 100)|round(2) }}%
+                    <span class="yield-rating">({{ dividend_analysis.yield_attractiveness }})</span>
+                </div>
+                {% if dividend_analysis.payout_ratio %}
+                <div class="dividend-item">
+                    <strong>Payout Ratio:</strong> {{ (dividend_analysis.payout_ratio * 100)|round(1) }}%
+                    <span class="sustainability-rating">({{ dividend_analysis.dividend_sustainability }})</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ===== TECHNICAL TAB ===== #}
+    <div class="tab-panel" :class="{ active: tab === 'technical' }" role="tabpanel" x-show="tab === 'technical'" x-cloak>
+
+        {% if trend_analysis and trend_analysis.trends %}
+        <div class="analysis-section">
+            <h3>Trend Analysis</h3>
+            <div class="trend-grid">
+                {% for period, data in trend_analysis.trends.items() %}
+                <div class="trend-card">
+                    <h4>{{ period.upper() }}</h4>
+                    <div class="trend-return {{ 'positive' if data.return > 0 else 'negative' }}">{{ (data.return * 100)|round(1) }}%</div>
+                    <div class="trend-direction">{{ data.trend_direction|title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if trend_analysis.momentum_score %}
+            <div class="momentum-info">
+                <strong>Momentum Score:</strong> {{ trend_analysis.momentum_score }}
+                <strong>Trend Consistency:</strong> {{ trend_analysis.trend_consistency }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if technical_analysis %}
+        <div class="analysis-section">
+            <h3>Technical Toolkit</h3>
+            {% if technical_analysis.error %}
+            <p class="error">{{ technical_analysis.error }}</p>
+            {% else %}
+            <div class="technical-signal">
+                <span class="signal-chip signal-{{ technical_analysis.signal.hysteresis_state.bucket }}">
+                    {{ technical_analysis.signal.action }}
+                    <span>({{ technical_analysis.signal.score|round(1) }}/10)</span>
+                </span>
+                <div class="signal-components">
+                    <span>Trend: {{ technical_analysis.signal.components.trend|round(1) }}/5</span>
+                    <span>Momentum: {{ technical_analysis.signal.components.momentum|round(1) }}/5</span>
+                </div>
+            </div>
+            {% if technical_analysis.signal.notes %}
+            <ul class="technical-notes">{% for note in technical_analysis.signal.notes %}<li class="technical-note">{{ note }}</li>{% endfor %}</ul>
+            {% endif %}
+
+            <div class="indicator-grid">
+                <div class="indicator-card"><h4>MACD</h4><div class="indicator-value">{{ technical_analysis.indicators.macd.histogram|round(3) if technical_analysis.indicators.macd.histogram is not none else 'n/a' }}</div><small>Line {{ technical_analysis.indicators.macd.line|round(3) if technical_analysis.indicators.macd.line is not none else 'n/a' }}, Signal {{ technical_analysis.indicators.macd.signal|round(3) if technical_analysis.indicators.macd.signal is not none else 'n/a' }}</small></div>
+                <div class="indicator-card"><h4>RSI (14)</h4><div class="indicator-value">{{ technical_analysis.indicators.rsi.value }}</div></div>
+                <div class="indicator-card"><h4>ADX (14)</h4><div class="indicator-value">{{ technical_analysis.indicators.adx.adx|round(2) if technical_analysis.indicators.adx.adx is not none else 'n/a' }}</div><small>+DI {{ technical_analysis.indicators.adx.plus_di|round(1) if technical_analysis.indicators.adx.plus_di is not none else 'n/a' }} / -DI {{ technical_analysis.indicators.adx.minus_di|round(1) if technical_analysis.indicators.adx.minus_di is not none else 'n/a' }}</small></div>
+                <div class="indicator-card"><h4>Bollinger</h4><div class="indicator-value">{{ technical_analysis.indicators.bollinger.price_position|title }}</div><small>Upper {{ technical_analysis.indicators.bollinger.upper|round(2) if technical_analysis.indicators.bollinger.upper is not none else 'n/a' }}, Lower {{ technical_analysis.indicators.bollinger.lower|round(2) if technical_analysis.indicators.bollinger.lower is not none else 'n/a' }}</small></div>
+                <div class="indicator-card"><h4>SMA Stack</h4><div class="indicator-value">20d {{ technical_analysis.indicators.sma.sma20|round(2) if technical_analysis.indicators.sma.sma20 is not none else 'n/a' }}</div><small>50d {{ technical_analysis.indicators.sma.sma50|round(2) if technical_analysis.indicators.sma.sma50 is not none else 'n/a' }}, 200d {{ technical_analysis.indicators.sma.sma200|round(2) if technical_analysis.indicators.sma.sma200 is not none else 'n/a' }}</small></div>
+                <div class="indicator-card"><h4>Support</h4><div class="indicator-value">{% if technical_analysis.patterns.support_levels %}{% for level in technical_analysis.patterns.support_levels %}{{ level|round(2) }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}n/a{% endif %}</div></div>
+                <div class="indicator-card"><h4>Resistance</h4><div class="indicator-value">{% if technical_analysis.patterns.resistance_levels %}{% for level in technical_analysis.patterns.resistance_levels %}{{ level|round(2) }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}n/a{% endif %}</div></div>
+                <div class="indicator-card"><h4>Trendline</h4><div class="indicator-value">{{ technical_analysis.patterns.trendline.slope|round(4) }}</div><small>Fib 0.382 {{ technical_analysis.patterns.fibonacci['0.382']|round(2) }}, 0.618 {{ technical_analysis.patterns.fibonacci['0.618']|round(2) }}</small></div>
+            </div>
+
+            <div class="performance-metrics">
+                <div class="metric"><span class="metric-label">Sharpe</span><span class="metric-value">{{ technical_analysis.performance.sharpe_ratio }}</span></div>
+                <div class="metric"><span class="metric-label">Calmar</span><span class="metric-value">{{ technical_analysis.performance.calmar_ratio }}</span></div>
+                <div class="metric"><span class="metric-label">Max Drawdown</span><span class="metric-value">{{ (technical_analysis.performance.max_drawdown * 100)|round(2) }}%</span></div>
+                <div class="metric"><span class="metric-label">Volatility</span><span class="metric-value">{{ (technical_analysis.performance.volatility * 100)|round(2) }}%</span></div>
+            </div>
+
+            {% if technical_analysis.chart and technical_analysis.chart.png %}
+            <div class="technical-chart full-width">
+                <img src="{{ technical_analysis.chart.png_url or url_for('static', filename=technical_analysis.chart.png) }}" alt="Technical chart for {{ ticker or company_name }}" loading="lazy">
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ===== MACRO & QUALITY TAB ===== #}
+    <div class="tab-panel" :class="{ active: tab === 'macro' }" role="tabpanel" x-show="tab === 'macro'" x-cloak>
+
+        {% if macro_context %}
+        <div class="analysis-section">
+            <h3>Macro &amp; Market Context</h3>
+            {% if macro_context.error %}
+            <p class="error">{{ macro_context.error }}</p>
+            {% else %}
+            {% set snapshot = macro_context.snapshot %}
+            {% if snapshot and snapshot.dashboard %}
+            {% set macro_labels = {'gdp_growth': 'GDP Growth', 'cpi': 'CPI YoY', 'unemployment_rate': 'Unemployment Rate', 'fed_funds_rate': 'Fed Funds Rate', 'yield_curve_spread': '10Y-2Y Spread'} %}
+            <table class="macro-table">
+                <thead><tr><th>Indicator</th><th>Latest</th><th>Trend</th><th>As Of</th></tr></thead>
+                <tbody>
+                {% for key, label in macro_labels.items() %}
+                {% set entry = snapshot.dashboard.get(key) %}
+                {% if entry %}
+                <tr>
+                    <td>{{ label }}</td>
+                    <td>{% if entry.latest.value is not none %}{{ entry.latest.value|round(2) }}{% else %}n/a{% endif %}</td>
+                    <td>{{ entry.trend|replace('_', ' ')|title }}</td>
+                    <td>{% if entry.latest.date %}{{ entry.latest.date.strftime('%Y-%m-%d') }}{% else %}n/a{% endif %}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            <div class="macro-highlights">
+                {% if macro_context.recession_signals %}
+                <div class="macro-card">
+                    <h4>Recession Signals</h4>
+                    <ul>
+                        {% set sahm = macro_context.recession_signals.sahm_rule %}{% if sahm %}<li>Sahm Rule: {{ 'Triggered' if sahm.triggered else 'Normal' }} (Gap {{ sahm.gap }})</li>{% endif %}
+                        {% set curve = macro_context.recession_signals.yield_curve_inversion %}{% if curve %}<li>Yield Curve: {{ 'Inverted' if curve.inverted else 'Upright' }} (Latest {{ curve.latest }})</li>{% endif %}
+                        {% set buffett = macro_context.recession_signals.buffett_indicator %}{% if buffett %}<li>Buffett Indicator: {{ 'Overvalued' if buffett.stretched else 'Fair' }} ({{ buffett.latest }})</li>{% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if macro_context.sentiment %}
+                <div class="macro-card">
+                    <h4>Sentiment Regime</h4>
+                    <p>Regime: <strong>{{ macro_context.sentiment.regime|replace('_', ' ')|title }}</strong></p>
+                    {% if macro_context.sentiment.valuation_state %}<p>Valuation: {{ macro_context.sentiment.valuation_state|title }}</p>{% endif %}
+                    {% if macro_context.sentiment.flow_trend %}<p>Flows: {{ macro_context.sentiment.flow_trend|title }}</p>{% endif %}
+                </div>
+                {% endif %}
+                {% if macro_context.alignment and macro_context.alignment.insights %}
+                <div class="macro-card">
+                    <h4>Forecast Alignment</h4>
+                    <ul>{% for insight in macro_context.alignment.insights %}<li>{{ insight }}</li>{% endfor %}</ul>
+                    <p><strong>Bias:</strong> {{ macro_context.alignment.risk_bias|replace('_', ' ')|title }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if qualitative_moat %}
+        <div class="analysis-section">
+            <h3>Moat Assessment</h3>
+            {% if qualitative_moat.overall_score %}
+            <div class="summary-chip">
+                <span class="moat-rating-badge">{{ qualitative_moat.moat_rating }}</span>
+                <span class="score-badge score-positive">Score: {{ qualitative_moat.overall_score|round(1) }}</span>
+            </div>
+            {% endif %}
+            {% if qualitative_moat.dimensions %}
+            <table class="moat-table">
+                <thead><tr><th>Dimension</th><th>Manual (0-5)</th><th>AI Signal (0-100)</th><th>Blended (0-100)</th><th>Summary</th></tr></thead>
+                <tbody>
+                {% for key, data in qualitative_moat.dimensions.items() %}
+                <tr>
+                    <td>{{ key.replace('_', ' ')|title }}</td>
+                    <td>{% if data.manual_score is not none %}{{ (data.manual_score / 20)|round(2) }}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.ai_score is not none %}{{ data.ai_score|round(1) }}{% else %}n/a{% endif %}</td>
+                    <td>{% if data.combined_score is not none %}{{ data.combined_score|round(1) }}{% else %}n/a{% endif %}</td>
+                    <td>{{ data.summary or 'Summary unavailable.' }}{% if data.notes %}<ul class="list-clean">{% for note in data.notes %}<li>{{ note }}</li>{% endfor %}</ul>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if ownership_trends %}
+        <div class="analysis-section">
+            <h3>Ownership Trends</h3>
+            {% set inst = ownership_trends.get('institutional') or {} %}
+            {% set ins = ownership_trends.get('insider') or {} %}
+            <div class="macro-highlights">
+                <div class="macro-card">
+                    <h4>Institutional Ownership</h4>
+                    <p><strong>Latest:</strong> {{ inst.get('latest', 'n/a') }}{% if inst.get('latest') is not none %}%{% endif %}</p>
+                    <p><strong>Trend:</strong> {{ inst.get('trend', 'unknown')|replace('_', ' ')|title }}</p>
+                    {% if inst.get('change_percentage') is not none %}<p><strong>Change:</strong> {{ inst.get('change_percentage')|round(2) }}%</p>{% endif %}
+                </div>
+                <div class="macro-card">
+                    <h4>Insider Ownership</h4>
+                    <p><strong>Latest:</strong> {{ ins.get('latest', 'n/a') }}{% if ins.get('latest') is not none %}%{% endif %}</p>
+                    <p><strong>Trend:</strong> {{ ins.get('trend', 'unknown')|replace('_', ' ')|title }}</p>
+                    {% if ins.get('change_percentage') is not none %}<p><strong>Change:</strong> {{ ins.get('change_percentage')|round(2) }}%</p>{% endif %}
+                </div>
+            </div>
+            {% if ownership_trends.get('alerts') %}
+            <h4>Alerts</h4>
+            <ul class="list-clean">{% for alert in ownership_trends.get('alerts') %}<li>{{ alert }}</li>{% endfor %}</ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if management_quality %}
+        <div class="analysis-section">
+            <h3>Management Quality</h3>
+            {% if management_quality.score is not none %}
+            <div class="summary-chip">
+                <span class="score-badge score-positive">Score: {{ management_quality.score|round(1) }}</span>
+                <span class="moat-rating-badge">{{ management_quality.rating }}</span>
+            </div>
+            {% endif %}
+            {% if management_quality.highlights %}<h4>Highlights</h4><ul class="list-clean">{% for h in management_quality.highlights %}<li>{{ h }}</li>{% endfor %}</ul>{% endif %}
+            {% if management_quality.warnings %}<h4>Watchouts</h4><ul class="list-clean">{% for w in management_quality.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ===== COMPARATIVE TAB ===== #}
+    <div class="tab-panel" :class="{ active: tab === 'comparative' }" role="tabpanel" x-show="tab === 'comparative'" x-cloak>
+        {% if comparative_analysis %}
+        <div class="analysis-section">
+            <h3>Comparative Analysis</h3>
+            <div class="comparison-grid">
+                <div class="comparison-item"><strong>Sector</strong>{{ comparative_analysis.sector }}</div>
+                <div class="comparison-item"><strong>Market Cap</strong>{{ comparative_analysis.market_cap_category }}</div>
+                <div class="comparison-item"><strong>Valuation</strong>{{ comparative_analysis.valuation_vs_peers }}</div>
+                <div class="comparison-item"><strong>Growth</strong>{{ comparative_analysis.growth_vs_peers }}</div>
+                <div class="comparison-item"><strong>Profitability</strong>{{ comparative_analysis.profitability_vs_peers }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>

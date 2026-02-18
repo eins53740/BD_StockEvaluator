@@ -1,0 +1,17 @@
+{# Skeleton loading screen shown during HTMX evaluation #}
+<div class="loading-overlay">
+    <div class="loader"></div>
+    <p>Analyzing <strong>{{ ticker }}</strong>... Fetching data, running evaluation, generating insights.</p>
+</div>
+<div style="margin-top:2em;">
+    <div class="skeleton skeleton-line medium"></div>
+    <div class="skeleton skeleton-line short"></div>
+    <div style="margin-top:1.5em;">
+        <div class="skeleton skeleton-chart"></div>
+    </div>
+    <div style="margin-top:1.5em;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1em;">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+    </div>
+</div>

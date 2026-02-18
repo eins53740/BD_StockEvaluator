@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ..core import StockAnalysisService
+from .user_features import router as user_features_router
 
 app = FastAPI(
     title="Stock Evaluator API",
@@ -32,6 +33,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(user_features_router, prefix="/user", tags=["User Features"])
 
 analysis_service = StockAnalysisService()
 
