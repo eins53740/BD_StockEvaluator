@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -21,6 +22,10 @@ from pydantic import BaseModel, Field
 import yfinance as yf
 
 from ..core import StockAnalysisService
+
+_TICKER_RE = re.compile(r"^[A-Z0-9.\-^]{1,12}$")
+_MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+_ALLOWED_HOLDING_COLUMNS = {"quantity", "buy_price", "buy_date", "currency"}
 
 router = APIRouter()
 
@@ -107,7 +112,7 @@ class WatchlistEntry(BaseModel):
 class PortfolioAddRequest(BaseModel):
     ticker: str
     quantity: float
-    buy_price: float
+    buy_price: float = Field(..., gt=0)
     buy_date: Optional[str] = None
     currency: str = "USD"
 
@@ -144,9 +149,19 @@ class SentimentResult(BaseModel):
 # Watchlist Endpoints (E13)
 # ---------------------------------------------------------------------------
 
+def _validate_ticker(raw: str) -> str:
+    """Validate and normalize a ticker symbol."""
+    ticker = raw.upper().strip()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="Ticker is required.")
+    if not _TICKER_RE.fullmatch(ticker):
+        raise HTTPException(status_code=400, detail="Invalid ticker symbol format.")
+    return ticker
+
+
 @router.post("/watchlist", response_model=WatchlistEntry)
 def add_to_watchlist(req: WatchlistAddRequest, client_id: str = Depends(_get_client_id)):
-    ticker = req.ticker.upper().strip()
+    ticker = _validate_ticker(req.ticker)
     if not ticker:
         raise HTTPException(status_code=400, detail="Ticker is required.")
     now = datetime.now(timezone.utc).isoformat()
@@ -262,7 +277,7 @@ def evaluate_watchlist(client_id: str = Depends(_get_client_id)):
 
 @router.post("/portfolio", response_model=PortfolioHolding)
 def add_holding(req: PortfolioAddRequest, client_id: str = Depends(_get_client_id)):
-    ticker = req.ticker.upper().strip()
+    ticker = _validate_ticker(req.ticker)
     if not ticker or req.quantity <= 0:
         raise HTTPException(status_code=400, detail="Valid ticker and positive quantity required.")
     now = datetime.now(timezone.utc).isoformat()
@@ -325,6 +340,11 @@ def update_holding(holding_id: int, req: PortfolioUpdateRequest, client_id: str 
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update.")
 
+        # Allowlist column names to prevent SQL injection via dynamic SET clause
+        invalid_cols = set(updates.keys()) - _ALLOWED_HOLDING_COLUMNS
+        if invalid_cols:
+            raise HTTPException(status_code=400, detail=f"Invalid fields: {invalid_cols}")
+
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [holding_id, client_id]
@@ -365,7 +385,10 @@ def import_portfolio_csv(
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported.")
 
-    content = file.file.read().decode("utf-8")
+    raw_bytes = file.file.read()
+    if len(raw_bytes) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB.")
+    content = raw_bytes.decode("utf-8")
     reader = csv.DictReader(io.StringIO(content))
 
     now = datetime.now(timezone.utc).isoformat()
@@ -454,9 +477,7 @@ def portfolio_performance(client_id: str = Depends(_get_client_id)):
 @router.get("/patterns/{ticker}")
 def get_patterns(ticker: str):
     """Return technical patterns including candlestick and chart patterns."""
-    ticker = ticker.upper().strip()
-    if not ticker:
-        raise HTTPException(status_code=400, detail="Ticker is required.")
+    ticker = _validate_ticker(ticker)
 
     try:
         from ..analysis.epic3 import Epic3TechnicalAnalyzer
@@ -492,7 +513,7 @@ def _detect_candlestick_patterns(analyzer) -> List[Dict[str, Any]]:
     l = df["Low"].values  # noqa: E741
     c = df["Close"].values
 
-    for i in range(2, min(len(df), len(df))):
+    for i in range(2, len(df)):
         body = abs(c[i] - o[i])
         full_range = h[i] - l[i]
         if full_range == 0:
@@ -615,9 +636,7 @@ def _build_stock_universe() -> List[Dict[str, Any]]:
 @router.get("/sentiment/{ticker}", response_model=SentimentResult)
 def get_sentiment(ticker: str):
     """Fetch recent news headlines and score their sentiment."""
-    ticker = ticker.upper().strip()
-    if not ticker:
-        raise HTTPException(status_code=400, detail="Ticker is required.")
+    ticker = _validate_ticker(ticker)
 
     try:
         stock = yf.Ticker(ticker)

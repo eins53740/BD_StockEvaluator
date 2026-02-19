@@ -9,6 +9,8 @@ Run locally with:
 
 from __future__ import annotations
 
+import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -20,6 +22,10 @@ from pydantic import BaseModel, Field
 from ..core import StockAnalysisService
 from .user_features import router as user_features_router
 
+logger = logging.getLogger(__name__)
+
+_TICKER_RE = re.compile(r"^[A-Z0-9.\-^]{1,12}$")
+
 app = FastAPI(
     title="Stock Evaluator API",
     version="0.1.0",
@@ -29,7 +35,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -95,6 +101,8 @@ def _normalise_ticker(raw: str) -> str:
     ticker = (raw or "").strip().upper()
     if not ticker:
         raise HTTPException(status_code=400, detail="Ticker symbol is required.")
+    if not _TICKER_RE.fullmatch(ticker):
+        raise HTTPException(status_code=400, detail="Invalid ticker symbol format.")
     return ticker
 
 
@@ -128,7 +136,8 @@ def evaluate(request: EvaluateRequest) -> Dict[str, Any]:
             ticker, include_opinion=request.include_opinion
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("Analysis failed for %s", ticker)
+        raise HTTPException(status_code=502, detail="Analysis failed. Please try again later.") from exc
 
     path = _serialize_path(analysis.get("path", []))
     payload = {
@@ -145,7 +154,8 @@ def get_features(ticker: str) -> Dict[str, Any]:
     try:
         analysis = analysis_service.analyze(normalised, include_opinion=False)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("Feature fetch failed for %s", normalised)
+        raise HTTPException(status_code=502, detail="Analysis failed. Please try again later.") from exc
 
     subset = {
         "ticker": normalised,
@@ -164,5 +174,18 @@ def get_sync_payload(ticker: str) -> Dict[str, Any]:
     try:
         payload = analysis_service.build_sync_payload(normalised)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("Sync payload failed for %s", normalised)
+        raise HTTPException(status_code=502, detail="Sync failed. Please try again later.") from exc
     return jsonable_encoder(payload)
+
+
+# ---------------------------------------------------------------------------
+# Mount Flask UI as a WSGI sub-application (catch-all fallback).
+# This allows a single uvicorn/gunicorn process to serve both the
+# FastAPI JSON API and the Flask HTML UI on the same port.
+# ---------------------------------------------------------------------------
+from starlette.middleware.wsgi import WSGIMiddleware  # noqa: E402
+
+from ..app import app as _flask_app  # noqa: E402
+
+app.mount("/", WSGIMiddleware(_flask_app))

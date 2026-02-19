@@ -3,19 +3,18 @@
 Enables running the Flask application as a module.
 `python -m bd_stockevaluator`
 """
+import os
+
 from .app import app
 
 
 def main():
     """
     Main entry point to run the Flask web application.
-    It respects the debug flag and other settings from environment variables.
+    For production, use gunicorn/uvicorn instead of app.run().
     """
-    # In app.py, app.run is called with debug=True.
-    # We will do the same here for consistency when running as a module.
-    # For a production deployment, a proper WSGI server like gunicorn or uvicorn
-    # should be used instead of app.run().
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=5000, debug=debug)
 
 
 if __name__ == "__main__":

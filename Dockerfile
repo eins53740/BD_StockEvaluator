@@ -62,6 +62,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/src/bd_stockevaluator/static /app/static
 COPY --from=builder /app/src/bd_stockevaluator/templates /app/templates
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/gunicorn.conf.py ./gunicorn.conf.py
 
 # Ensure runtime directories exist and are writable by the non-root user.
 RUN groupadd --system appuser && \
@@ -76,4 +77,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8000/health || exit 1
 
-CMD ["python", "-m", "app"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "bd_stockevaluator.api.main:app"]

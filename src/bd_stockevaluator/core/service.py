@@ -57,15 +57,34 @@ except Exception:  # Gemini SDK optional
     types = None
 
 try:
+    import bleach as _bleach
+
+    _SAFE_TAGS = [
+        "p", "h1", "h2", "h3", "h4", "h5", "h6",
+        "ul", "ol", "li", "strong", "em", "code", "pre",
+        "table", "thead", "tbody", "tr", "th", "td",
+        "br", "a", "blockquote", "hr",
+    ]
+    _SAFE_ATTRS = {"a": ["href", "title"]}
+except Exception:  # bleach optional
+    _bleach = None  # type: ignore[assignment]
+    _SAFE_TAGS = []
+    _SAFE_ATTRS = {}
+
+try:
     import markdown as _markdown
 
     def _md_to_html(text: str) -> str:
-        return _markdown.markdown(text)
+        raw_html = _markdown.markdown(text)
+        if _bleach is not None:
+            return _bleach.clean(raw_html, tags=_SAFE_TAGS, attributes=_SAFE_ATTRS)
+        return raw_html
 
 except Exception:  # Markdown optional
 
     def _md_to_html(text: str) -> str:
-        return f"<pre>{text or ''}</pre>"
+        import html as _html
+        return f"<pre>{_html.escape(text or '')}</pre>"
 
 
 DATA_DIR = PROJECT_ROOT / "data"

@@ -1,7 +1,9 @@
 # D:/GitHub/BD_Python_AI/BD_Finance/FlowchartStocks/stock-evaluator/app.py
 # 20251507 BDLRA
 #
+import html
 import os
+import re
 import threading
 import atexit
 from datetime import datetime
@@ -40,7 +42,17 @@ app = Flask(
     template_folder=str(TEMPLATES_DIR),
     static_folder=str(STATIC_DIR),
 )
-app.secret_key = os.environ.get("SECRET_KEY", "a-default-secret-key-for-dev-only")
+_flask_debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+if _flask_debug:
+    app.secret_key = os.environ.get("SECRET_KEY", "a-default-secret-key-for-dev-only")
+else:
+    _secret = os.environ.get("SECRET_KEY", "")
+    if not _secret:
+        raise RuntimeError(
+            "SECRET_KEY environment variable is required in production. "
+            "Set FLASK_DEBUG=1 to use a default key for development."
+        )
+    app.secret_key = _secret
 
 # Reusable service shared with future API backends and the Android client.
 analysis_service = StockAnalysisService()
@@ -190,6 +202,9 @@ def index():
         if not ticker_symbol:
             flash("Please enter a stock ticker.", "error")
             return render_template("index.html", current_year=current_year)
+        if not _TICKER_RE.fullmatch(ticker_symbol):
+            flash("Invalid ticker symbol format.", "error")
+            return render_template("index.html", current_year=current_year)
 
         try:
             analysis = analysis_service.analyze(ticker_symbol)
@@ -212,6 +227,8 @@ def evaluate_htmx():
     ticker_symbol = request.form.get("ticker", "").upper().strip()
     if not ticker_symbol:
         return '<div class="flash-error" role="alert">Please enter a stock ticker.</div>'
+    if not _TICKER_RE.fullmatch(ticker_symbol):
+        return '<div class="flash-error" role="alert">Invalid ticker symbol format.</div>'
 
     try:
         analysis = analysis_service.analyze(ticker_symbol)
@@ -220,7 +237,7 @@ def evaluate_htmx():
     except Exception as exc:
         if hasattr(get_stock_data, "cache"):
             get_stock_data.cache.clear()
-        return f'<div class="flash-error" role="alert">{exc}</div>'
+        return f'<div class="flash-error" role="alert">{html.escape(str(exc))}</div>'
 
 
 @app.route("/api/search")
@@ -238,5 +255,7 @@ def search_tickers():
     return jsonify(matches[:8])
 
 
+_TICKER_RE = re.compile(r"^[A-Z0-9.\-^]{1,12}$")
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", debug=_flask_debug)
