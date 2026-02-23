@@ -603,6 +603,16 @@ def generate_stock_opinion(
 ) -> Optional[str]:
     """Generate AI opinion report with Groq (preferred) then Gemini fallback."""
 
+    # Normalise Unicode to ASCII-safe text (e.g. em-dash → hyphen) so that
+    # the Groq SDK does not raise UnicodeEncodeError on Windows.
+    import unicodedata
+
+    company_name = (
+        unicodedata.normalize("NFKD", company_name)
+        .encode("ascii", "replace")
+        .decode("ascii")
+    )
+
     groq_key = api_key or get_api_key("api_key_groq")
     prompt = _build_opinion_prompt(company_name, ticker, metrics)
 
