@@ -197,6 +197,19 @@ class SQLiteDataStore:
             """
         )
 
+        # Migrate: add columns that may be missing on older databases
+        existing = {
+            row[1]
+            for row in cursor.execute(
+                "PRAGMA table_info(fundamentals_snapshot)"
+            ).fetchall()
+        }
+        for col in ("exchange", "country"):
+            if col not in existing:
+                cursor.execute(
+                    f"ALTER TABLE fundamentals_snapshot ADD COLUMN {col} TEXT"
+                )
+
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS fundamentals_history (
