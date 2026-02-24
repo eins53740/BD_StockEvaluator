@@ -174,3 +174,5 @@ FlowchartStocks/stock-evaluator/__pycache__/features.cpython-313.pyc
 FlowchartStocks/stock-evaluator/__pycache__/evaluator.cpython-313.pyc
 FlowchartStocks/stock-evaluator/data/
 data/stocks.db
+.claude/settings.local.json
+data/stocks.db
