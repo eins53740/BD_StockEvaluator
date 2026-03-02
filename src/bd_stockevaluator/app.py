@@ -178,6 +178,9 @@ def stop_background_refresh():
         _refresh_thread.join(timeout=2)
 
 
+# NOTE: With multiple gunicorn workers, each worker spawns its own refresh
+# thread. Currently safe because ENABLE_BACKGROUND_REFRESH defaults to false.
+# If enabled with >1 worker, replace with a proper task queue (e.g. Celery).
 start_background_refresh()
 atexit.register(stop_background_refresh)
 
@@ -258,4 +261,6 @@ def search_tickers():
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-^]{1,12}$")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=_flask_debug)
+    # Deprecated: use `uvicorn bd_stockevaluator.api.main:app` instead.
+    # This standalone mode is kept for quick local debugging only.
+    app.run(host="0.0.0.0", port=8000, debug=_flask_debug)
