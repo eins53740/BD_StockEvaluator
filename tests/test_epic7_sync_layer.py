@@ -80,7 +80,7 @@ def test_sync_endpoint_returns_payload(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda ticker: sample_payload,
     )
 
-    response = client.get("/sync/ACME")
+    response = client.get("/api/sync/ACME")
 
     assert response.status_code == 200
     body = response.json()

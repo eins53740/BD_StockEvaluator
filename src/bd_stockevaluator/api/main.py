@@ -128,7 +128,7 @@ def health() -> Dict[str, Any]:
     }
 
 
-@app.post("/evaluate", response_model=EvaluationResponse)
+@app.post("/api/evaluate", response_model=EvaluationResponse)
 def evaluate(request: EvaluateRequest) -> Dict[str, Any]:
     ticker = _normalise_ticker(request.ticker)
     try:
@@ -148,7 +148,7 @@ def evaluate(request: EvaluateRequest) -> Dict[str, Any]:
     return jsonable_encoder(payload)
 
 
-@app.get("/features/{ticker}", response_model=FeatureResponse)
+@app.get("/api/features/{ticker}", response_model=FeatureResponse)
 def get_features(ticker: str) -> Dict[str, Any]:
     normalised = _normalise_ticker(ticker)
     try:
@@ -168,7 +168,7 @@ def get_features(ticker: str) -> Dict[str, Any]:
     return jsonable_encoder(subset)
 
 
-@app.get("/sync/{ticker}", response_model=SyncResponse)
+@app.get("/api/sync/{ticker}", response_model=SyncResponse)
 def get_sync_payload(ticker: str) -> Dict[str, Any]:
     normalised = _normalise_ticker(ticker)
     try:

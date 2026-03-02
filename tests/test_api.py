@@ -27,7 +27,7 @@ def test_evaluate_endpoint_success(service_mock):
     }
 
     response = client.post(
-        "/evaluate", json={"ticker": "msft", "include_opinion": True}
+        "/api/evaluate", json={"ticker": "msft", "include_opinion": True}
     )
     assert response.status_code == 200
     payload = response.json()
@@ -48,7 +48,7 @@ def test_features_endpoint_success(service_mock):
         "dividend_analysis": {},
     }
 
-    response = client.get("/features/msft")
+    response = client.get("/api/features/msft")
     assert response.status_code == 200
     payload = response.json()
     assert payload["risk_assessment"]["risk_level"] == "Low"
@@ -56,6 +56,6 @@ def test_features_endpoint_success(service_mock):
 
 
 def test_evaluate_requires_ticker():
-    response = client.post("/evaluate", json={"ticker": ""})
+    response = client.post("/api/evaluate", json={"ticker": ""})
     assert response.status_code == 400
     assert response.json()["detail"] == "Ticker symbol is required."

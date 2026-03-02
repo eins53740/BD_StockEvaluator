@@ -162,6 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeMermaid();
 });
 
+// Re-render mermaid diagrams after HTMX swaps in new content
+document.addEventListener('htmx:afterSettle', () => {
+  const unrendered = document.querySelectorAll('.mermaid:not(.mermaid-rendered)');
+  if (unrendered.length > 0) {
+    flowchartDebugger.log('INFO', `HTMX swap detected — rendering ${unrendered.length} new mermaid diagram(s)`);
+    renderMermaidDiagrams();
+  }
+});
+
 function initializeMermaid() {
   try {
     flowchartDebugger.log('INFO', 'Starting Mermaid initialization');
